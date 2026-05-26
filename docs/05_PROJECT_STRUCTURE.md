@@ -21,7 +21,7 @@ backend/
 ├── Dockerfile
 └── src/
     ├── main/
-    │   ├── java/com/example/skybooker/
+    │   ├── java/com/skybooker/
     │   │   ├── SkyBookerApplication.java
     │   │   ├── common/
     │   │   │   ├── api/

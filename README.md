@@ -99,7 +99,7 @@ skybooker-flight-system/
 ├── docs/
 ├── backend/
 │   ├── pom.xml
-│   ├── src/main/java/com/example/skybooker/
+│   ├── src/main/java/com/skybooker/
 │   └── src/main/resources/db/migration/
 ├── frontend/
 │   ├── package.json
