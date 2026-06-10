@@ -2,6 +2,7 @@ package com.skybooker.refund;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.skybooker.admin.dto.FlightFormDTO;
+import com.skybooker.order.dto.ChangeOrderDTO;
 import com.skybooker.order.dto.CreateOrderDTO;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -18,6 +19,7 @@ import org.springframework.test.web.servlet.MvcResult;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
@@ -28,6 +30,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @ActiveProfiles("test")
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
 class RefundIntegrationTest {
+
+    private static final AtomicInteger COUNTER = new AtomicInteger();
 
     @Autowired
     private MockMvc mockMvc;
@@ -78,6 +82,57 @@ class RefundIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.feeAmount").value(174.00))
                 .andExpect(jsonPath("$.data.refundAmount").value(406.00));
+    }
+
+    @Test
+    void refund_changedOrder_releasesCurrentChangedSeat() throws Exception {
+        Long oldFlightId = createFlight(LocalDateTime.now().plusDays(3));
+        Long newFlightId = createFlight(LocalDateTime.now().plusDays(5));
+        Long orderId = createAndPayOrder(oldFlightId);
+        Long newSeatId = getAvailableSeatId(newFlightId);
+
+        ChangeOrderDTO changeDto = new ChangeOrderDTO();
+        changeDto.setNewFlightId(newFlightId);
+        ChangeOrderDTO.SeatMapping mapping = new ChangeOrderDTO.SeatMapping();
+        mapping.setPassengerId(1L);
+        mapping.setNewSeatId(newSeatId);
+        changeDto.setSeatMappings(List.of(mapping));
+
+        mockMvc.perform(post("/api/orders/" + orderId + "/change")
+                        .header("Authorization", "Bearer " + userToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(changeDto)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.status").value("CHANGED"));
+
+        mockMvc.perform(post("/api/orders/" + orderId + "/refund")
+                        .header("Authorization", "Bearer " + userToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(200))
+                .andExpect(jsonPath("$.data.orderId").value(orderId))
+                .andExpect(jsonPath("$.data.status").value("SUCCESS"))
+                .andExpect(jsonPath("$.data.feeAmount").value(58.00))
+                .andExpect(jsonPath("$.data.refundAmount").value(522.00));
+
+        String status = jdbcTemplate.queryForObject(
+                "SELECT status FROM ticket_order WHERE id = ?", String.class, orderId);
+        assertThat(status).isEqualTo("REFUNDED");
+        Integer newRemaining = jdbcTemplate.queryForObject(
+                "SELECT remaining_seats FROM flight WHERE id = ?", Integer.class, newFlightId);
+        assertThat(newRemaining).isEqualTo(12);
+        Integer oldRemaining = jdbcTemplate.queryForObject(
+                "SELECT remaining_seats FROM flight WHERE id = ?", Integer.class, oldFlightId);
+        assertThat(oldRemaining).isEqualTo(12);
+
+        var seat = jdbcTemplate.queryForMap(
+                "SELECT status, locked_by_order_id, lock_expire_time FROM flight_seat WHERE id = ?", newSeatId);
+        assertThat(seat.get("status")).isEqualTo("AVAILABLE");
+        assertThat(seat.get("locked_by_order_id")).isNull();
+        assertThat(seat.get("lock_expire_time")).isNull();
+
+        Integer refundCount = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM refund_record WHERE order_id = ?", Integer.class, orderId);
+        assertThat(refundCount).isEqualTo(1);
     }
 
     // ---- Boundary: 24h / 2h thresholds ----
@@ -252,7 +307,7 @@ class RefundIntegrationTest {
 
     private Long createFlight(LocalDateTime departure) throws Exception {
         FlightFormDTO dto = new FlightFormDTO();
-        dto.setFlightNo("RF" + System.currentTimeMillis() % 100000);
+        dto.setFlightNo("RF" + System.currentTimeMillis() % 100000 + COUNTER.incrementAndGet());
         dto.setAirlineId(1L);
         dto.setDepartureAirportId(1L);
         dto.setArrivalAirportId(3L);

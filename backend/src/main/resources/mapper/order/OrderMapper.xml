@@ -134,4 +134,29 @@
         SELECT COUNT(*) FROM ticket_order
     </select>
 
+    <update id="updateOrderFlightAndAmounts">
+        UPDATE ticket_order
+        SET flight_id = #{flightId},
+            ticket_amount = #{ticketAmount},
+            airport_fee = #{airportFee},
+            fuel_fee = #{fuelFee},
+            service_fee = #{serviceFee},
+            total_amount = #{totalAmount}
+        WHERE id = #{id}
+    </update>
+
+    <update id="updateOrderPassengerSeat">
+        UPDATE order_passenger
+        SET seat_id = #{seatId}, seat_no = #{seatNo}, ticket_price = #{ticketPrice}
+        WHERE id = #{id}
+    </update>
+
+    <select id="findPassengersByOrderId" resultType="com.skybooker.order.entity.OrderPassenger">
+        SELECT id, order_id, passenger_id, passenger_name, passenger_type,
+               seat_id, seat_no, ticket_price, created_at
+        FROM order_passenger
+        WHERE order_id = #{orderId}
+        ORDER BY id
+    </select>
+
 </mapper>

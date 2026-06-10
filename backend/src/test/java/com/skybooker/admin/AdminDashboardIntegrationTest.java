@@ -218,6 +218,7 @@ class AdminDashboardIntegrationTest {
         jdbcTemplate.update("DELETE FROM waitlist_passenger");
         jdbcTemplate.update("DELETE FROM waitlist_order");
         jdbcTemplate.update("DELETE FROM refund_record");
+        jdbcTemplate.update("DELETE FROM change_record");
         jdbcTemplate.update("DELETE FROM order_passenger");
         jdbcTemplate.update("DELETE FROM ticket_order");
         jdbcTemplate.update("DELETE FROM flight WHERE flight_no LIKE 'DSH%'");
