@@ -42,7 +42,7 @@ public class RefundService {
             return refundMapper.findByOrderId(orderId);
         }
 
-        if (!"ISSUED".equals(order.getStatus())) {
+        if (!isRefundableStatus(order.getStatus())) {
             throw new BusinessException(ErrorCode.ORDER_STATE_INVALID);
         }
 
@@ -55,7 +55,7 @@ public class RefundService {
         BigDecimal refundAmount = order.getTotalAmount().subtract(feeAmount)
                 .setScale(2, RoundingMode.HALF_UP);
 
-        int cas = orderMapper.updateOrderStatusCAS(orderId, "ISSUED", "REFUNDED");
+        int cas = orderMapper.updateOrderStatusCAS(orderId, order.getStatus(), "REFUNDED");
         if (cas == 0) {
             return refundMapper.findByOrderId(orderId);
         }
@@ -96,6 +96,10 @@ public class RefundService {
             return new BigDecimal("0.10");
         }
         return new BigDecimal("0.30");
+    }
+
+    private boolean isRefundableStatus(String status) {
+        return "ISSUED".equals(status) || "CHANGED".equals(status);
     }
 
     private int countOrderPassengers(Long orderId) {

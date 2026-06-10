@@ -22,6 +22,7 @@ PENDING_PAYMENT -> ISSUED
 PENDING_PAYMENT -> CANCELLED
 ISSUED -> REFUNDED
 ISSUED -> CHANGED
+CHANGED -> REFUNDED
 ```
 
 约束：
@@ -29,7 +30,7 @@ ISSUED -> CHANGED
 - 票务订单的 `PENDING_PAYMENT` 只能由创建订单产生；
 - `ISSUED` 由普通订单模拟支付成功或候补兑现出票产生；
 - `CANCELLED` 只能取消待支付订单；
-- `REFUNDED` 只能由已出票订单退票产生；
+- `REFUNDED` 可由普通已出票订单或已改签订单退票产生；
 - 当前加分版本改签采用单步确认，成功后直接 `ISSUED -> CHANGED`；
 - `CHANGE_PENDING` 预留给后续真实支付差价、人工审核或异步出票流程，当前单步改签实现不得产生该状态；
 - 所有状态变更接口必须具备幂等语义，重复请求不能重复扣减或释放座位。
