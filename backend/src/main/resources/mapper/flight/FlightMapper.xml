@@ -386,4 +386,40 @@
         LIMIT 1
     </select>
 
+    <update id="releaseSoldSeatsBySeatIds">
+        UPDATE flight_seat
+        SET status = 'AVAILABLE', locked_by_order_id = NULL, lock_expire_time = NULL, version = version + 1
+        WHERE id IN
+        <foreach collection="seatIds" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+        AND status = 'SOLD'
+    </update>
+
+    <update id="sellAvailableSeatsByIds">
+        UPDATE flight_seat
+        SET status = 'SOLD', locked_by_order_id = #{orderId}, version = version + 1
+        WHERE id IN
+        <foreach collection="seatIds" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+        AND status = 'AVAILABLE'
+    </update>
+
+    <select id="findSameRouteFlights" resultType="com.skybooker.flight.entity.Flight">
+        SELECT id, flight_no, airline_id, departure_airport_id, arrival_airport_id,
+               departure_time, arrival_time, duration_minutes, base_price,
+               remaining_seats, total_seats, status, publish_status,
+               direct_flag, baggage_allowance, punctuality_rate, created_at, updated_at
+        FROM flight
+        WHERE departure_airport_id = #{departureAirportId}
+          AND arrival_airport_id = #{arrivalAirportId}
+          AND id != #{excludeFlightId}
+          AND publish_status = 'PUBLISHED'
+          AND departure_time > NOW()
+          AND status IN ('ON_TIME', 'DELAYED')
+          AND remaining_seats >= #{passengerCount}
+        ORDER BY departure_time
+    </select>
+
 </mapper>

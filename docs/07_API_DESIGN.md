@@ -344,6 +344,26 @@ POST /api/orders/{id}/refund
 GET /api/orders/{id}/change-options
 ```
 
+响应示例：
+
+```json
+{
+  "code": 200,
+  "message": "success",
+  "data": [
+    {
+      "flightId": 1002,
+      "flightNo": "SB2002",
+      "departureTime": "2026-07-01T09:00:00",
+      "arrivalTime": "2026-07-01T11:30:00",
+      "basePrice": 780.00,
+      "remainingSeats": 8,
+      "status": "ON_TIME"
+    }
+  ]
+}
+```
+
 规则：
 
 - 仅普通用户可查询自己的 `ISSUED` 订单；
@@ -362,7 +382,7 @@ POST /api/orders/{id}/change
 ```json
 {
   "newFlightId": 1002,
-  "items": [
+  "seatMappings": [
     {
       "passengerId": 1,
       "newSeatId": 20001
@@ -371,12 +391,38 @@ POST /api/orders/{id}/change
 }
 ```
 
+响应示例：
+
+```json
+{
+  "code": 200,
+  "message": "success",
+  "data": {
+    "id": 9001,
+    "orderNo": "T202607010001",
+    "status": "CHANGED",
+    "flightId": 1002,
+    "totalAmount": 860.00,
+    "passengers": [
+      {
+        "passengerId": 1,
+        "passengerName": "张三",
+        "passengerType": "ADULT",
+        "seatId": 20001,
+        "seatNo": "12A",
+        "ticketPrice": 780.00
+      }
+    ]
+  }
+}
+```
+
 确认规则：
 
 - 仅 `ISSUED` 订单允许改签，成功后直接变为 `CHANGED`；
 - 当前版本跳过 `CHANGE_PENDING`，该状态仅预留给后续真实差价支付、人工审核或异步出票流程；
 - `newFlightId` 必须不同于当前订单航班，并且必须与原航班具有相同出发机场和到达机场；
-- `items` 必须为订单内每个乘机人各提供一个新座位，不能遗漏乘机人、重复乘机人或重复座位；
+- `seatMappings` 必须为订单内每个乘机人各提供一个新座位，不能遗漏乘机人、重复乘机人或重复座位；
 - 新座位必须属于 `newFlightId`，且状态为 `AVAILABLE`；
 - 旧座位释放必须按改签前旧 `seatId` 白名单更新，不能在新座位写入同一订单 ID 后按 `orderId` 全量释放；
 - 改签确认必须在同一事务中完成旧座位释放、新座位售出、订单状态更新、订单乘机人座位快照更新、订单金额更新和 `change_record` 写入；

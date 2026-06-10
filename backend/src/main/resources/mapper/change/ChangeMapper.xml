@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.skybooker.change.mapper.ChangeMapper">
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO change_record(order_id, old_flight_id, new_flight_id,
+                                  old_seat_id, new_seat_id, price_diff, change_fee, status)
+        VALUES(#{orderId}, #{oldFlightId}, #{newFlightId},
+               #{oldSeatId}, #{newSeatId}, #{priceDiff}, #{changeFee}, #{status})
+    </insert>
+
+    <select id="findByOrderId" resultType="com.skybooker.change.entity.ChangeRecord">
+        SELECT id, order_id, old_flight_id, new_flight_id,
+               old_seat_id, new_seat_id, price_diff, change_fee, status, created_at
+        FROM change_record
+        WHERE order_id = #{orderId}
+        ORDER BY id
+    </select>
+
+    <select id="countByOrderId" resultType="int">
+        SELECT COUNT(*) FROM change_record WHERE order_id = #{orderId}
+    </select>
+
+</mapper>
