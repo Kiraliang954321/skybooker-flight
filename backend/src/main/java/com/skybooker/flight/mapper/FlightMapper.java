@@ -142,4 +142,14 @@ public interface FlightMapper {
     List<String> findCabinClassesByOrderId(@Param("orderId") Long orderId);
 
     Long findAirlineIdByCodeOrName(@Param("code") String code, @Param("name") String name);
+
+    int releaseSoldSeatsBySeatIds(@Param("seatIds") List<Long> seatIds);
+
+    int sellAvailableSeatsByIds(@Param("seatIds") List<Long> seatIds,
+                                @Param("orderId") Long orderId);
+
+    List<Flight> findSameRouteFlights(@Param("departureAirportId") Long departureAirportId,
+                                      @Param("arrivalAirportId") Long arrivalAirportId,
+                                      @Param("excludeFlightId") Long excludeFlightId,
+                                      @Param("passengerCount") int passengerCount);
 }

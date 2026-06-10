@@ -38,4 +38,19 @@ public interface OrderMapper {
     List<OrderVO> findAllOrders(@Param("offset") int offset, @Param("size") int size);
 
     long countAllOrders();
+
+    void updateOrderFlightAndAmounts(@Param("id") Long id,
+                                     @Param("flightId") Long flightId,
+                                     @Param("ticketAmount") java.math.BigDecimal ticketAmount,
+                                     @Param("airportFee") java.math.BigDecimal airportFee,
+                                     @Param("fuelFee") java.math.BigDecimal fuelFee,
+                                     @Param("serviceFee") java.math.BigDecimal serviceFee,
+                                     @Param("totalAmount") java.math.BigDecimal totalAmount);
+
+    void updateOrderPassengerSeat(@Param("id") Long id,
+                                  @Param("seatId") Long seatId,
+                                  @Param("seatNo") String seatNo,
+                                  @Param("ticketPrice") java.math.BigDecimal ticketPrice);
+
+    List<OrderPassenger> findPassengersByOrderId(@Param("orderId") Long orderId);
 }

@@ -333,6 +333,7 @@ POST /api/orders/{id}/refund
 幂等规则：
 
 - `ISSUED`：计算手续费、生成退票记录、释放座位并触发候补；
+- `CHANGED`：按改签后的当前航班、当前座位和当前订单金额计算退票，释放改签后的当前座位并触发当前航班候补；
 - 已经是 `REFUNDED`：返回现有退票结果；
 - 其他状态：返回订单状态不允许操作。
 
@@ -343,6 +344,33 @@ POST /api/orders/{id}/refund
 ```http
 GET /api/orders/{id}/change-options
 ```
+
+响应示例：
+
+```json
+{
+  "code": 200,
+  "message": "success",
+  "data": [
+    {
+      "flightId": 1002,
+      "flightNo": "SB2002",
+      "departureTime": "2026-07-01T09:00:00",
+      "arrivalTime": "2026-07-01T11:30:00",
+      "basePrice": 780.00,
+      "remainingSeats": 8,
+      "status": "ON_TIME"
+    }
+  ]
+}
+```
+
+规则：
+
+- 仅普通用户可查询自己的 `ISSUED` 订单；
+- 当前版本采用单步改签，候选航班必须与原订单航班具有相同出发机场和到达机场；
+- 候选航班必须已发布、未起飞、状态为 `ON_TIME` 或 `DELAYED`，且可用座位数能满足订单全部乘机人；
+- 候选列表必须排除当前订单航班，当前版本不支持同航班仅换座。
 
 ### 提交改签
 
@@ -355,7 +383,7 @@ POST /api/orders/{id}/change
 ```json
 {
   "newFlightId": 1002,
-  "items": [
+  "seatMappings": [
     {
       "passengerId": 1,
       "newSeatId": 20001
@@ -364,7 +392,51 @@ POST /api/orders/{id}/change
 }
 ```
 
-改签属于加分版本。实现时必须保证旧座位释放、新座位锁定、差价记录和订单状态更新在同一事务内完成。
+响应示例：
+
+```json
+{
+  "code": 200,
+  "message": "success",
+  "data": {
+    "id": 9001,
+    "orderNo": "T202607010001",
+    "status": "CHANGED",
+    "flightId": 1002,
+    "totalAmount": 860.00,
+    "passengers": [
+      {
+        "passengerId": 1,
+        "passengerName": "张三",
+        "passengerType": "ADULT",
+        "seatId": 20001,
+        "seatNo": "12A",
+        "ticketPrice": 780.00
+      }
+    ]
+  }
+}
+```
+
+确认规则：
+
+- 仅 `ISSUED` 订单允许改签，成功后直接变为 `CHANGED`；
+- 当前版本跳过 `CHANGE_PENDING`，该状态仅预留给后续真实差价支付、人工审核或异步出票流程；
+- `newFlightId` 必须不同于当前订单航班，并且必须与原航班具有相同出发机场和到达机场；
+- `seatMappings` 必须为订单内每个乘机人各提供一个新座位，不能遗漏乘机人、重复乘机人或重复座位；
+- 新座位必须属于 `newFlightId`，且状态为 `AVAILABLE`；
+- 旧座位释放必须按改签前旧 `seatId` 白名单更新，不能在新座位写入同一订单 ID 后按 `orderId` 全量释放；
+- 改签确认必须在同一事务中完成旧座位释放、新座位售出、订单状态更新、订单乘机人座位快照更新、订单金额更新和 `change_record` 写入；
+- 任一环节失败必须整体回滚，重复提交在订单已离开 `ISSUED` 后返回当前状态或订单状态错误，但不能重复释放座位、售出座位、扣减余票或插入改签记录。
+
+金额口径：
+
+- `change_record.price_diff = 新座位票价 - 原乘机人票价`，按乘机人记录；
+- `change_record.change_fee` 使用当前简化规则记录改签手续费；
+- `ticket_order.ticket_amount` 更新为新座位票价合计；
+- `ticket_order.airport_fee`、`fuel_fee`、`service_fee` 按既有固定公式和不变乘机人数重新计算；
+- `ticket_order.total_amount = ticket_amount + airport_fee + fuel_fee + service_fee`；
+- 当前版本不实现真实差价支付或退款，`change_fee` 不计入 `ticket_order.total_amount`，仅作为改签记录审计字段。
 
 ## 8. 候补接口
 
