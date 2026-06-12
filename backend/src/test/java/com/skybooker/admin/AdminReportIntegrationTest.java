@@ -180,6 +180,7 @@ class AdminReportIntegrationTest {
         Long shanghaiBeijingRefunded = insertTicketOrder("ROUTE-SHA-BJS-REFUND", 1L, "REFUNDED", "500.00",
                 LocalDateTime.of(2026, 5, 20, 10, 0));
         insertRefund(shanghaiBeijingRefunded, "100.00", LocalDateTime.of(2026, 6, 2, 11, 0));
+        insertRefund(shanghaiBeijingRefunded, "999.00", "FAILED", LocalDateTime.of(2026, 6, 2, 11, 30));
 
         Long shenzhenChengduRefunded = insertTicketOrder("ROUTE-SZX-CTU-REFUND", 5L, "REFUNDED", "450.00",
                 LocalDateTime.of(2026, 5, 20, 10, 0));
@@ -258,6 +259,7 @@ class AdminReportIntegrationTest {
         Long orderTwo = insertTicketOrder("REFUND-TREND-2", 1L, "REFUNDED", "300.00",
                 LocalDateTime.of(2026, 5, 20, 10, 0));
         insertRefund(orderTwo, "80.00", LocalDateTime.of(2026, 6, 1, 11, 0));
+        insertRefund(orderTwo, "999.00", "FAILED", LocalDateTime.of(2026, 6, 1, 12, 0));
         Long outside = insertTicketOrder("REFUND-TREND-OUTSIDE", 1L, "REFUNDED", "300.00",
                 LocalDateTime.of(2026, 5, 20, 10, 0));
         insertRefund(outside, "500.00", LocalDateTime.of(2026, 5, 31, 23, 0));
@@ -407,10 +409,14 @@ class AdminReportIntegrationTest {
     }
 
     private void insertRefund(Long orderId, String refundAmount, LocalDateTime createdAt) {
+        insertRefund(orderId, refundAmount, "SUCCESS", createdAt);
+    }
+
+    private void insertRefund(Long orderId, String refundAmount, String status, LocalDateTime createdAt) {
         jdbcTemplate.update("""
                 INSERT INTO refund_record(order_id, user_id, reason, refund_amount, fee_amount, status, created_at)
-                VALUES(?, 2, 'admin report test', ?, 0.00, 'SUCCESS', ?)
-                """, orderId, new BigDecimal(refundAmount), createdAt);
+                VALUES(?, 2, 'admin report test', ?, 0.00, ?, ?)
+                """, orderId, new BigDecimal(refundAmount), status, createdAt);
     }
 
     private void insertWaitlist(String waitlistNoPrefix, Long flightId, String status, String payAmount,
