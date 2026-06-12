@@ -7,11 +7,13 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.time.Clock;
 import java.time.DateTimeException;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
@@ -23,6 +25,11 @@ public class LlmIntentParserService {
 
     private final LlmChatClient llmChatClient;
     private final ObjectMapper objectMapper;
+    private Clock clock = Clock.systemDefaultZone();
+
+    public void setClock(Clock clock) {
+        this.clock = Objects.requireNonNull(clock, "clock must not be null");
+    }
 
     public ParsedCondition parse(String message) {
         if (message == null || message.isBlank()) {
@@ -238,8 +245,11 @@ public class LlmIntentParserService {
     }
 
     private String systemPrompt() {
+        LocalDate today = LocalDate.now(clock);
         return """
                 你是机票查询条件解析器。只能返回一个 JSON 对象，不要返回 Markdown 或解释。
+                当前日期是 %s。用户提到“今天、明天、后天、大后天、下周、下周一、周末”等相对日期时，
+                必须基于这个日期换算为具体 departureDate。
                 你不能编造航班、航班号、价格、库存、机场、航空公司、URL 或推荐卡片。
                 只输出这些字段，未知字段会被后端忽略：
                 departureCity, arrivalCity, departureDate, passengerCount, cabinClass,
@@ -250,6 +260,6 @@ public class LlmIntentParserService {
                 sort 只能是 PRICE_ASC、DURATION_ASC、TIME_ASC、SEATS_DESC、PUNCTUAL_DESC 或 DEFAULT。
                 如果缺少 departureCity、arrivalCity 或 departureDate，请在 missingFields 中列出这些字段，
                 并给出 followUpQuestion。
-                """;
+                """.formatted(today);
     }
 }

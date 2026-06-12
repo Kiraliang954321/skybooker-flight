@@ -7,8 +7,11 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
+import java.time.Clock;
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.time.ZoneId;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -103,6 +106,30 @@ class LlmIntentParserServiceTest {
         var result = parser.parse("上海到北京机票");
 
         assertThat(result.getPassengerCount()).isEqualTo(1);
+    }
+
+    @Test
+    void parse_systemPromptIncludesCurrentDateForRelativeDateResolution() {
+        AtomicReference<String> capturedSystemPrompt = new AtomicReference<>();
+        LlmIntentParserService parser = new LlmIntentParserService((system, user) -> {
+            capturedSystemPrompt.set(system);
+            return """
+                    {
+                      "departureCity": "上海",
+                      "arrivalCity": "北京",
+                      "departureDate": "2026-06-13"
+                    }
+                    """;
+        }, objectMapper);
+        ZoneId zone = ZoneId.of("Asia/Shanghai");
+        parser.setClock(Clock.fixed(LocalDate.of(2026, 6, 12).atStartOfDay(zone).toInstant(), zone));
+
+        parser.parse("明天从上海到北京");
+
+        assertThat(capturedSystemPrompt.get())
+                .contains("当前日期是 2026-06-12")
+                .contains("今天、明天、后天")
+                .contains("必须基于这个日期换算");
     }
 
     @Test
