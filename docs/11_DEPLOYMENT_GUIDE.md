@@ -401,6 +401,8 @@ MySQL 8 容器通常占用 1-2 GB 内存，Spring Boot 后端约 512 MB-1 GB，R
 | 8088 | TCP | HTTP API 网关（无域名时） | 按需 |
 | 22 | TCP | SSH 管理 | 是 |
 
+MySQL（3306）、Redis（6379）、后端（8080）默认绑定到 `127.0.0.1`，不对外开放。Nginx（8088）绑定到 `0.0.0.0`，是唯一的公共入口。
+
 MySQL（3306）、Redis（6379）、后端（8080）端口不需要对外开放，只通过 Nginx 反向代理访问。
 
 ```bash
@@ -494,13 +496,31 @@ curl http://localhost:8088/api/flights?page=1\&size=1
 
 如果通过公网 IP 访问，将 `localhost` 替换为服务器公网 IP。
 
-#### 第五步：修改默认管理员密码
+#### 第五步：首次 Smoke 验证（使用默认密码）
 
-首次部署后，使用默认管理员账号登录并通过管理后台修改密码：
+在修改管理员密码之前，先用默认凭据跑一次 smoke 确认部署正常：
+
+```bash
+SKYBOOKER_BASE_URL=http://localhost:8088 scripts/smoke/backend-smoke.sh
+```
+
+所有检查通过后，再修改管理员密码。
+
+#### 第六步：修改默认管理员密码
+
+使用默认管理员账号登录并通过管理后台修改密码：
 
 ```text
 管理员用户名：admin
 默认密码：Admin@123456
+```
+
+修改密码后，后续 smoke 验证必须显式传入新密码：
+
+```bash
+SKYBOOKER_ADMIN_PASSWORD='<new-admin-password>' \
+SKYBOOKER_BASE_URL=http://localhost:8088 \
+scripts/smoke/backend-smoke.sh
 ```
 
 ### 9.3 当前部署边界和前端集成路径
@@ -565,7 +585,9 @@ MYSQL_USER=root
 JWT_SECRET=<random-secret-at-least-256-bits>
 
 # === 网络 ===
-BACKEND_PORT=8080
+# 端口变量支持 127.0.0.1:PORT 格式（仅本地访问）或纯 PORT 格式（所有接口）
+# MySQL、Redis、Backend 默认绑定 127.0.0.1，Nginx 默认绑定 0.0.0.0
+BACKEND_PORT=127.0.0.1:8080
 NGINX_PORT=8088
 
 # === 功能开关 ===
@@ -596,6 +618,17 @@ REDIS_PORT=6379
 
 `MYSQL_HOST`、`MYSQL_PORT`、`REDIS_HOST`、`REDIS_PORT` 在 Compose 部署中由 `docker-compose.yml` 自动注入到后端容器，不需要在 `.env` 中设置。
 
+**端口绑定安全**：`docker-compose.yml` 默认将 MySQL、Redis、Backend 端口绑定到 `127.0.0.1`，不对外暴露。如果在 `.env` 中设置 `MYSQL_PORT`、`REDIS_PORT`、`BACKEND_PORT` 为纯数字（如 `MYSQL_PORT=3306`），会覆盖默认行为，改为绑定到所有网络接口（`0.0.0.0`）。公网服务器部署时：
+
+- 如果不需要从宿主机直接访问这些服务，**删除或注释** `.env` 中的 `MYSQL_PORT`、`REDIS_PORT`、`BACKEND_PORT` 行，让 Compose 使用默认的 `127.0.0.1` 绑定；
+- 如果需要本地访问（如手动执行 SQL），保持默认的 `127.0.0.1:PORT` 格式，例如：
+
+```env
+MYSQL_PORT=127.0.0.1:3306
+REDIS_PORT=127.0.0.1:6379
+BACKEND_PORT=127.0.0.1:8080
+```
+
 ### 10.2 生产安全检查清单
 
 部署到公网前，逐项确认：
@@ -605,7 +638,7 @@ REDIS_PORT=6379
 - [ ] 默认管理员密码 `Admin@123456` 已通过管理后台修改；
 - [ ] `OPENAPI_ENABLED=false`（Swagger/Knife4j 不对外暴露）；
 - [ ] 对外只开放必要端口（80/443 或 8088）；
-- [ ] MySQL（3306）、Redis（6379）、后端（8080）端口不对外开放；
+- [ ] MySQL（3306）、Redis（6379）、后端（8080）端口绑定到 `127.0.0.1`（Compose 默认行为）；
 - [ ] `.env` 文件在 `.gitignore` 中，不会被提交；
 - [ ] 没有真实密钥、密码、证书或 IP 出现在仓库文件中。
 
@@ -637,6 +670,15 @@ server {
 
     location /healthz {
         proxy_pass http://127.0.0.1:8088/healthz;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    location = /api {
+        proxy_pass http://127.0.0.1:8088/api;
         proxy_http_version 1.1;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
@@ -735,6 +777,14 @@ SKYBOOKER_BASE_URL=http://skybooker.example.com scripts/smoke/backend-smoke.sh
 
 # 域名验证（HTTPS）
 SKYBOOKER_BASE_URL=https://skybooker.example.com scripts/smoke/backend-smoke.sh
+```
+
+首次部署时使用默认管理员密码（`Admin@123456`），smoke 可直接运行。修改管理员密码后，必须显式传入新密码：
+
+```bash
+SKYBOOKER_ADMIN_PASSWORD='<new-admin-password>' \
+SKYBOOKER_BASE_URL=https://skybooker.example.com \
+scripts/smoke/backend-smoke.sh
 ```
 
 ### 12.2 验证覆盖范围
