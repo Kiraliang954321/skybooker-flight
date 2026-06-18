@@ -427,7 +427,7 @@ git clone https://github.com/<your-org>/skybooker-flight.git
 cd skybooker-flight
 
 # 切换到目标分支
-git checkout main   # 或 dev、feature 分支
+git checkout main   # 或本次待部署的短生命周期分支
 ```
 
 将 `<your-org>` 替换为实际的 GitHub 用户名或组织。
