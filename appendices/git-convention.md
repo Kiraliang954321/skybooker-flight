@@ -4,18 +4,18 @@
 
 ```text
 main         正式稳定分支，不直接开发，禁止直接 push
-dev          开发集成分支，日常功能通过 PR 合并到这里
 feature/*    功能分支
 bugfix/*     常规修复分支
 hotfix/*     线上或演示前紧急修复分支
+docs/*       文档变更分支
 ```
 
-团队合作时，一般不要直接 push 到 `main`。推荐使用“分支开发 + Pull Request + Review + 合并”的方式协作。
+团队合作时，不直接 push 到 `main`。`main` 是唯一长期稳定分支，应启用分支保护。每次开发前从 `main` 新建短生命周期分支，开发完成后通过 Pull Request 直接合并回 `main`。
 
 日常开发流程：
 
 ```text
-feature/* 或 bugfix/* -> PR 到 dev -> 测试通过 -> PR 到 main
+main -> feature/*、bugfix/*、hotfix/* 或 docs/* -> PR 到 main
 ```
 
 ## 2. 推荐开发流程
@@ -36,13 +36,13 @@ git commit -m "feat: add login page"
 git push origin feature/login-page
 ```
 
-然后在 GitHub 上创建 Pull Request，等待队友 review。确认没问题后，再合并到 `dev` 或 `main`。
+然后在 GitHub 上创建指向 `main` 的 Pull Request，等待队友 review 和检查通过。确认没问题后，再合并到 `main`。
 
 ## 3. 什么时候可以直接 push
 
-直接 push 只适合个人项目、临时实验仓库、团队明确允许直接推 `dev` 的场景，或 README typo 这类极小文档修改。
+直接 push 只适合个人项目或临时实验仓库。本项目的 `main` 分支应保持保护状态，不允许直接 push；即使是 README typo 这类极小文档修改，也建议走短分支和 PR。
 
-即使是小团队，也建议至少保护 `main` 分支，不允许直接 push。
+如果仓库中仍存在历史 `dev` 分支，应停止作为集成分支使用，并在确认无未合并提交后删除。
 
 ## 4. 提交格式
 
@@ -52,15 +52,15 @@ git push origin feature/login-page
 
 ## 5. type 类型
 
-| 类型 | 说明 |
-|---|---|
-| feat | 新功能 |
-| fix | 修复 Bug |
-| docs | 文档 |
-| style | 样式调整 |
-| refactor | 重构 |
-| test | 测试 |
-| chore | 构建或工具配置 |
+| 类型     | 说明           |
+| -------- | -------------- |
+| feat     | 新功能         |
+| fix      | 修复 Bug       |
+| docs     | 文档           |
+| style    | 样式调整       |
+| refactor | 重构           |
+| test     | 测试           |
+| chore    | 构建或工具配置 |
 
 ## 6. 示例
 

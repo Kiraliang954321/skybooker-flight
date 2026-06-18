@@ -52,7 +52,7 @@ AI 智能购票助手
 
 演示前至少完成：
 
-- 从 `dev` 或演示分支启动最新代码；
+- 从 `main` 或本次演示分支启动最新代码；
 - `.env` 已配置 `MYSQL_PASSWORD`、`JWT_SECRET`、数据库名、端口和 `OPENAPI_ENABLED`；
 - `docker compose up -d --build` 后 `mysql`、`redis`、`backend`、`nginx` 均为 healthy；
 - `curl http://localhost:8088/healthz` 返回 `ok`；
