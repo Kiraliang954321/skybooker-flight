@@ -1,5 +1,6 @@
 package com.skybooker.auth.mail;
 
+import jakarta.annotation.PostConstruct;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -11,6 +12,22 @@ import org.springframework.web.client.RestClient;
 @Configuration
 @EnableConfigurationProperties(MailProperties.class)
 public class MailConfiguration {
+
+    private final MailProperties properties;
+
+    public MailConfiguration(MailProperties properties) {
+        this.properties = properties;
+    }
+
+    @PostConstruct
+    void validateProvider() {
+        String provider = properties.getProvider();
+        if (provider != null && !provider.isBlank()
+                && !"log".equals(provider) && !"resend".equals(provider)) {
+            throw new IllegalStateException(
+                    "mail.provider 只允许 'log' 或 'resend'(小写),当前值: '" + provider + "'");
+        }
+    }
 
     @Bean
     @Profile("!test")

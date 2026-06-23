@@ -72,4 +72,16 @@ class MailConfigurationTest {
                     assertThat(context).doesNotHaveBean(ResendMailService.class);
                 });
     }
+
+    @Test
+    void invalidMailProviderFailsStartupInsteadOfFallingBackToLog() {
+        contextRunner
+                .withPropertyValues("mail.provider=resned")
+                .run(context -> {
+                    assertThat(context).hasFailed();
+                    assertThat(context.getStartupFailure())
+                        .rootCause()
+                        .hasMessageContaining("mail.provider");
+                });
+    }
 }
