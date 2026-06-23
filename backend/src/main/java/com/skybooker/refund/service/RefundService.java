@@ -31,7 +31,7 @@ public class RefundService {
     private final WaitlistFulfillmentService waitlistFulfillmentService;
 
     @Transactional
-    public RefundVO refundOrder(Long orderId) {
+    public RefundVO refundOrder(Long orderId, String reason) {
         Long userId = SecurityUtil.getCurrentUserId();
         TicketOrder order = orderMapper.findById(orderId);
         if (order == null || !order.getUserId().equals(userId)) {
@@ -63,7 +63,7 @@ public class RefundService {
         RefundRecord record = new RefundRecord();
         record.setOrderId(orderId);
         record.setUserId(userId);
-        record.setReason("用户主动退款");
+        record.setReason(reason);
         record.setRefundAmount(refundAmount);
         record.setFeeAmount(feeAmount);
         record.setStatus("SUCCESS");
