@@ -1,142 +1,222 @@
 # SkyBooker 云航智订
 
-> **SkyBooker 云航智订** 是一个基于 **Next.js + Spring Boot + MyBatis + MySQL + Redis + Flyway** 的智能航班查询与机票预订系统。
+> **SkyBooker 云航智订** 是一个基于 **Next.js + Spring Boot** 的智能航班查询与机票预订系统，覆盖航班检索、选座下单、订单支付、候补、退改签、AI 购票助手和管理后台。
 
 - 中文名：云航智订
 - 英文名：SkyBooker
-- 仓库名：`skybooker-flight-system`
+- 仓库名：`skybooker-flight`
 - 项目副标题：基于 Next.js + Spring Boot 的智能航班查询与机票预订系统
 
-本项目面向 Java Web 开发框架实训场景，模拟真实航空票务平台的核心业务流程，提供航班查询、智能购票助手、机票预订、可视化选座、排队候补、退改签、后台管理与运营统计等能力。
+项目面向 Java Web 实训与课程设计场景，按真实在线航空票务平台的核心流程设计。前端负责页面体验、表单交互、航班展示、座位选择和后台操作；后端负责认证鉴权、业务规则、订单状态流转、座位库存控制、候补兑现、退改签计算、AI 推荐查询和管理统计。
 
-项目不是简单的 CRUD 作业，而是按照真实前后端分离项目进行设计：前端负责用户体验与页面交互，后端负责业务规则、库存事务、订单状态流转、数据库查询与安全控制。
-
-## 1. 项目背景
-
-传统人工售票方式存在效率低、信息不透明、用户体验差等问题。随着在线出行服务普及，用户希望能够快速查询航班、筛选价格、查看余票、在线订票、退改签以及获得个性化购票建议。
-
-本项目围绕“航班查询与机票预订”构建完整业务系统，重点体现：
-
-- 航班查询与高级筛选；
-- 机票预订与座位库存控制；
-- 多人并发订票场景下的事务安全；
-- 候补排队购票；
-- 在线退票与改签；
-- 管理员后台维护航班、订单和普通用户；
-- AI 智能购票助手推荐可购买航班。
-
-## 2. 核心功能
+## 核心功能
 
 ### 用户端
 
 - 用户认证：邮箱验证码注册、邮箱密码登录、邮箱验证码找回密码、JWT 鉴权；
-- 航班查询：按日期 + 航班号查询，或按日期 + 出发地 + 目的地查询；
-- 高级筛选：航空公司、起飞时间、价格区间、飞行时长、直飞/中转、航班状态；
-- 航班详情：起降机场、起降时间、飞行时长、票价、余票、准点率、行李额；
-- 可视化选座：可选、已售、锁定中、不可选座位；
-- 机票预订：选择乘机人、选择座位、提交订单、模拟支付；
-- 候补排队：目标舱位无票时提交并支付候补订单，有退票时优先为已支付候补用户出票；
-- 退票：根据规则计算手续费并释放座位；
-- 改签：选择新航班，计算差价与手续费；
-- 我的订单：查看订单、支付、取消、退票、改签。
+- 航班查询：按日期、航班号、出发地、目的地检索航班，支持航空公司、时间、价格、飞行时长、直飞/中转、舱位和余票筛选；
+- 乘机人与选座：维护乘机人，查看可选、已售、锁定中、不可选座位；
+- 订单流程：创建订单、模拟支付、取消订单、查看订单详情和订单列表；
+- 退改签：按规则计算退票手续费、改签差价和手续费，并维护订单状态；
+- 候补排队：目标舱位无票时提交候补，支付后等待，退票释放座位后自动兑现。
 
-### AI 智能购票助手
+### AI 购票助手
 
-- 支持用户自然语言表达需求，例如“我明天想从上海去北京，便宜一点”；
-- 解析用户出发地、目的地、日期、价格偏好、时间偏好等条件；
-- 查询数据库中真实可购买航班；
-- 返回前三个推荐航班；
-- 给出航班详情页、预订页、筛选结果页链接；
-- 缺少必要信息时主动追问。
+- 支持自然语言输入，例如“我明天想从上海去北京，便宜一点”；
+- 解析出发地、目的地、日期、价格偏好和时间偏好；
+- 必要信息缺失时主动追问；
+- 基于数据库真实航班返回推荐卡片、推荐理由和跳转链接；
+- 默认使用规则解析，也可启用兼容 OpenAI Chat Completions 的 LLM 意图解析。
 
 ### 管理后台
 
-- 管理员登录；
-- 航班管理：新增、修改、上架、下架；
-- 航司管理、机场管理；
-- 座位管理：生成座位、设置不可选座位；
-- 订单管理：查看订单、处理退票和改签；
-- 普通用户管理：查看、禁用普通用户，不包含管理员账号管理；
-- 数据统计：订单数、销售额、热门航线、订单状态分布。
+- 管理员独立登录和管理端 Token；
+- 航班新增、修改、上架、下架、生成座位和不可选座位设置；
+- 航司、机场、航线等基础资料维护；
+- 订单查看、普通用户启停、运营看板和高级报表；
+- 用户端 Token 与管理端 Token 隔离，普通用户不能访问后台接口。
 
-## 3. 技术栈
+## 技术栈
 
-### 前端
+- 前端：Next.js App Router、React、TypeScript、Tailwind CSS、shadcn/ui、lucide-react、React Hook Form、Zod
+- 后端：Java 21、Spring Boot 3.3、Spring MVC、Spring Security、MyBatis、MySQL 8、Redis 7、Flyway、JWT、Bean Validation、Knife4j / OpenAPI、Resend
+- 部署与测试：Docker、Docker Compose、Nginx、Maven、JUnit / Spring Boot Test、JMeter、Shell smoke scripts
 
-- Next.js App Router
-- React
-- TypeScript
-- Tailwind CSS
-- shadcn/ui
-- lucide-react
-- React Hook Form
-- Zod
-
-### 后端
-
-- Spring Boot
-- Spring MVC
-- MyBatis
-- MySQL
-- Redis
-- Flyway
-- Spring Security
-- JWT
-- Validation
-- Knife4j / Swagger
-
-### 部署
-
-- Docker
-- Docker Compose
-- Nginx
-
-## 4. 项目结构
+## 项目结构
 
 ```text
-skybooker-flight-system/
-├── README.md
-├── docs/
-├── backend/
-│   ├── pom.xml
-│   ├── src/main/java/com/skybooker/
-│   └── src/main/resources/db/migration/
-├── frontend/
-│   ├── package.json
-│   ├── DESIGN.md
-│   └── src/
+skybooker-flight/
+├── backend/                     # Spring Boot 后端
+│   ├── Dockerfile
+│   └── src/main/
+│       ├── java/com/skybooker/  # auth、flight、order、refund、change、waitlist、ai、admin 等模块
+│       └── resources/
+│           ├── mapper/          # MyBatis XML
+│           └── db/migration/    # Flyway 迁移
+├── frontend/                    # Next.js 前端应用
+├── deploy/nginx/                # Nginx 配置
+├── docs/                        # 需求、架构、API、部署、测试、展示文档
+├── appendices/                  # 错误码、响应、SQL、Git 规范
+├── scripts/                     # 烟测、并发测试、演示数据脚本
 ├── docker-compose.yml
-└── scripts/
+└── README.md
 ```
 
-详细结构见：`docs/05_PROJECT_STRUCTURE.md`。
+后端按业务模块纵向分包，每个模块按需包含 `controller/`、`service/`、`mapper/`、`entity/`、`dto/`、`vo/` 和 `enums/`。
 
-## 5. 快速启动
+## 快速启动
 
-### 1. 启动基础服务
+推荐使用 Docker Compose 启动。源码开发时再额外安装 JDK 21、Maven 3.8+、Node.js 20+ 和 pnpm。
+
+### 1. 准备环境变量
 
 ```bash
-cd skybooker-flight-system
 cp .env.example .env
-
-docker compose up -d mysql redis
 ```
 
-### 2. 启动后端
+`.env` 示例：
+
+```env
+MYSQL_HOST=localhost
+MYSQL_PORT=3306
+MYSQL_DB=flight_booking
+MYSQL_TEST_DB=flight_booking_test
+MYSQL_USER=root
+MYSQL_PASSWORD=replace-with-local-password
+
+REDIS_HOST=localhost
+REDIS_PORT=6379
+
+JWT_SECRET=replace-with-a-random-secret-at-least-256-bits-long
+JWT_EXPIRATION=86400000
+
+OPENAPI_ENABLED=true
+
+MAIL_PROVIDER=resend
+MAIL_FROM=SkyBooker <noreply@your-domain.com>
+RESEND_API_KEY=replace-with-resend-api-key
+
+AI_LLM_ENABLED=false
+AI_LLM_BASE_URL=https://api.openai.com/v1
+AI_LLM_API_KEY=replace-with-llm-provider-key
+AI_LLM_MODEL=gpt-4o-mini
+AI_LLM_TIMEOUT_MS=8000
+AI_LLM_MAX_RETRIES=1
+
+BACKEND_PORT=8080
+NGINX_PORT=8088
+```
+
+`MYSQL_PASSWORD`、`JWT_SECRET` 和 `RESEND_API_KEY` 应使用真实安全值，并只保存在本地 `.env`、服务器环境变量或部署平台密钥中。
+
+### 2. 启动服务
 
 ```bash
-cd backend
-set -a; source ../.env; set +a
-mvn spring-boot:run
+docker compose up -d --build
 ```
 
-后端启动时会自动执行 Flyway 脚本：
+查看状态：
+
+```bash
+docker compose ps
+docker compose logs -f backend
+```
+
+访问入口：
+
+```text
+http://localhost:8088
+```
+
+API 基地址：
+
+```text
+http://localhost:8088/api
+```
+
+验证：
+
+```bash
+curl 'http://localhost:8088/healthz'
+curl 'http://localhost:8088/api/flights?page=1&size=1'
+```
+
+OpenAPI 启用后可访问：
+
+```text
+http://localhost:8088/swagger-ui.html
+http://localhost:8088/v3/api-docs
+```
+
+### 3. 使用 Docker Hub 镜像
+
+使用已发布到 Docker Hub 的后端镜像时，可将 Compose 中的 `backend` 服务切换为：
+
+```yaml
+services:
+  backend:
+    image: yunluoxincheng/skybooker-backend:latest
+    container_name: skybooker-backend
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      MYSQL_HOST: mysql
+      MYSQL_PORT: 3306
+      MYSQL_DB: ${MYSQL_DB:-flight_booking}
+      MYSQL_USER: ${MYSQL_USER:-root}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?Set MYSQL_PASSWORD in .env}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env}
+      JWT_EXPIRATION: ${JWT_EXPIRATION:-86400000}
+      OPENAPI_ENABLED: ${OPENAPI_ENABLED:-false}
+      MAIL_PROVIDER: ${MAIL_PROVIDER:-resend}
+      MAIL_FROM: "${MAIL_FROM:-SkyBooker <noreply@your-domain.com>}"
+      RESEND_API_KEY: ${RESEND_API_KEY:?Set RESEND_API_KEY in .env}
+      AI_LLM_ENABLED: ${AI_LLM_ENABLED:-false}
+      AI_LLM_BASE_URL: ${AI_LLM_BASE_URL:-}
+      AI_LLM_API_KEY: ${AI_LLM_API_KEY:-}
+      AI_LLM_MODEL: ${AI_LLM_MODEL:-}
+      AI_LLM_TIMEOUT_MS: ${AI_LLM_TIMEOUT_MS:-8000}
+      AI_LLM_MAX_RETRIES: ${AI_LLM_MAX_RETRIES:-1}
+    ports:
+      - "${BACKEND_PORT:-127.0.0.1:8080}:8080"
+```
+
+完整部署说明见 `docs/11_DEPLOYMENT_GUIDE.md`。
+
+## 数据库与演示账号
+
+本项目使用 Flyway 自动初始化数据库，迁移脚本位于：
 
 ```text
 backend/src/main/resources/db/migration/
 ```
 
-### 3. 启动前端
+默认演示账号：
+
+```text
+普通用户：user1@example.com / User@123456
+管理员用户名：admin
+管理员密码：Admin@123456
+管理员资料邮箱：admin@skybooker.local
+```
+
+首次部署后应修改默认管理员密码。演示日期过期时，可运行 `scripts/refresh-demo-flight-dates.sql` 刷新演示航班和订单日期。
+
+## 本地开发
+
+后端：
+
+```bash
+cd backend
+mvn spring-boot:run
+```
+
+前端：
 
 ```bash
 cd frontend
@@ -144,54 +224,38 @@ pnpm install
 pnpm dev
 ```
 
-访问：
+前端 API 环境变量建议：
 
-```text
-http://localhost:3000
+```env
+NEXT_PUBLIC_API_BASE_URL=http://localhost:8080/api
 ```
 
-后端 API 地址：
+## 测试验证
 
-```text
-http://localhost:8080/api
+后端测试：
+
+```bash
+cd backend
+mvn test
 ```
 
-后端主配置要求从环境变量读取数据库密码和 JWT secret；缺少 `MYSQL_PASSWORD` 或 `JWT_SECRET` 时会启动失败，避免测试服或生产环境误用默认敏感配置。
+部署烟测：
 
-## 6. Flyway 数据库迁移
-
-本项目使用 Flyway 自动初始化数据库，不再手动导入单个 `init.sql`。
-
-迁移脚本位于：
-
-```text
-backend/src/main/resources/db/migration/
+```bash
+SKYBOOKER_BASE_URL=http://localhost:8088 scripts/smoke/backend-smoke.sh
 ```
 
-命名格式：
+同座位并发下单验证：
 
 ```text
-V1__init_schema.sql
-V2__init_base_data.sql
-V3__init_flight_data.sql
-V4__init_seat_data.sql
-V5__init_demo_orders.sql
-V6__add_ai_chat_tables.sql
+scripts/jmeter/same-seat-order-race.jmx
+scripts/jmeter/run-same-seat-concurrency-report.sh
+scripts/concurrency/verify-same-seat-order-race.sh
 ```
 
-## 7. 演示重点
+测试策略和报告生成说明见 `docs/12_TESTING_GUIDE.md`。
 
-建议 PPT 和系统视频重点展示：
-
-1. 航班查询与高级筛选；
-2. AI 智能购票助手自然语言推荐航班；
-3. 推荐结果点击进入筛选页或预订页；
-4. 可视化座位图；
-5. 并发订票库存控制；
-6. 候补下单支付与退票后自动兑现出票；
-7. 后台航班管理与数据统计。
-
-## 8. 文档索引
+## 文档索引
 
 - `docs/01_REQUIREMENTS.md`：需求分析
 - `docs/02_FEATURE_SPEC.md`：功能细化
@@ -209,34 +273,22 @@ V6__add_ai_chat_tables.sql
 - `docs/14_PRESENTATION_GUIDE.md`：展示指南
 - `docs/15_AUTH_DESIGN.md`：认证与登录注册设计
 - `docs/16_STATE_MACHINE.md`：核心状态机
-- `frontend/DESIGN.md`：给 AI 生成 UI 使用的 UI/UX 设计规范
+- `appendices/api-response-convention.md`：统一响应约定
+- `appendices/error-code.md`：错误码约定
+- `appendices/git-convention.md`：Git 协作约定
+- `appendices/sql-convention.md`：SQL 规范
+- `frontend/DESIGN.md`：前端 UI/UX 设计规范
 
-## 认证方案说明
+## 开发规范
 
-SkyBooker 云航智订采用用户端和管理端隔离的认证方案。
+- 后端遵循 `docs/10_BACKEND_DESIGN.md`；
+- Controller 负责请求、校验和统一响应；
+- Service 负责业务规则、权限上下文和事务边界；
+- Mapper 只负责数据库访问；
+- Flyway 是唯一的数据库结构和初始化数据来源；
+- API 字段使用 `camelCase`，数据库表和字段使用 `lower_snake_case`；
+- 金额使用 `DECIMAL` / `BigDecimal`，不使用浮点数。
 
-用户端认证：
+## 许可证
 
-- 邮箱验证码注册；
-- 邮箱密码登录；
-- 邮箱验证码找回密码；
-- JWT 登录态管理。
-
-管理端认证：
-
-- 管理后台入口为 `/admin`；
-- 管理员使用用户名 + 密码登录；
-- 管理端 JWT 只允许访问后台接口。
-
-认证设计原则：
-
-- 普通用户通过邮箱验证码完成注册，密码使用 BCrypt 哈希存储；
-- 用户端登录使用邮箱 + 密码，只允许普通用户登录；
-- 管理后台入口为 `/admin`，管理员使用用户名 + 密码登录；
-- 管理员账号同样存储在 `users` 表，通过 `role = ADMIN` 访问管理后台，但不能登录用户端；
-- 找回密码通过邮箱验证码校验用户身份；
-- 邮箱验证码存储在 Redis 中，默认有效期 5 分钟，并限制发送频率；
-- 管理员账号不开放注册，由 Flyway 初始化或后台创建；
-- 手机验证码、微信登录、支付宝登录作为扩展能力，不作为实训主流程。
-
-推荐邮件发送方式：开发环境可使用个人邮箱 SMTP 或 Mock 邮件服务，演示/部署环境可使用 Brevo、Resend 等事务邮件服务。短信验证码由于通常涉及付费、签名审核和服务商资质，不作为默认实现。
+本项目基于 [MIT License](./LICENSE) 开源。
