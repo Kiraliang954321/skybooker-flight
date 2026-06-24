@@ -31,7 +31,7 @@ ALTER TABLE airline ADD CONSTRAINT chk_airline_status CHECK (status IN ('ENABLED
 ALTER TABLE airport ADD CONSTRAINT chk_airport_status CHECK (status IN ('ENABLED','DISABLED'));
 ALTER TABLE flight ADD CONSTRAINT chk_flight_status CHECK (status IN ('ON_TIME','DELAYED','CANCELLED'));
 ALTER TABLE flight ADD CONSTRAINT chk_flight_publish_status CHECK (publish_status IN ('PUBLISHED','DRAFT'));
-ALTER TABLE flight_seat ADD CONSTRAINT chk_flight_seat_status CHECK (status IN ('AVAILABLE','LOCKED','SOLD'));
+ALTER TABLE flight_seat ADD CONSTRAINT chk_flight_seat_status CHECK (status IN ('AVAILABLE','LOCKED','SOLD','DISABLED'));
 ALTER TABLE ticket_order ADD CONSTRAINT chk_ticket_order_status CHECK (status IN ('PENDING_PAYMENT','ISSUED','CANCELLED','REFUNDED','CHANGED'));
 ALTER TABLE waitlist_order ADD CONSTRAINT chk_waitlist_order_status CHECK (status IN ('PENDING_PAYMENT','WAITING','SUCCESS','EXPIRED','FAILED'));
 ALTER TABLE auth_verification_code_log ADD CONSTRAINT chk_auth_log_send_status CHECK (send_status IN ('SUCCESS','FAILED'));
