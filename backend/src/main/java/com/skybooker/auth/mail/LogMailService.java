@@ -7,6 +7,7 @@ public class LogMailService implements MailService {
 
     @Override
     public void sendVerificationCode(String toEmail, String code, String scene) {
-        log.info("[MailService] 发送验证码: email={}, scene={}, code={}", toEmail, scene, code);
+        log.info("[MailService] 验证码已发送(日志模式): email={}, scene={}", toEmail, scene);
+        log.debug("[MailService] 验证码明文(仅 debug 级,生产默认关闭): code={}", code);
     }
 }
