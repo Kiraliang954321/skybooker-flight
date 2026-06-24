@@ -79,6 +79,25 @@ class AuthRegistrationIntegrationTest {
     }
 
     @Test
+    void sendResetCode_unknownEmail_consecutiveRequestsHitCooldownLikeExisting() throws Exception {
+        SendEmailCodeDTO dto = new SendEmailCodeDTO();
+        dto.setEmail("nonexistent@example.com");
+        dto.setScene("RESET_PASSWORD");
+
+        mockMvc.perform(post("/api/auth/email-code")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(dto)))
+                .andExpect(status().isOk());
+
+        // 第二次:与存在邮箱一样命中冷却(不存在也设了 cooldown,无法通过连续请求枚举)
+        mockMvc.perform(post("/api/auth/email-code")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(dto)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value(10005));
+    }
+
+    @Test
     void sendCode_rejectsLoginScene() throws Exception {
         String json = "{\"email\":\"test@example.com\",\"scene\":\"LOGIN\"}";
 
