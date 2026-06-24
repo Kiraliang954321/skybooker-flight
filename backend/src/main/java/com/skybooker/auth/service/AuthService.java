@@ -90,7 +90,8 @@ public class AuthService {
         } else if ("RESET_PASSWORD".equals(scene)) {
             User existing = authMapper.findByEmail(email);
             if (existing == null) {
-                throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND);
+                // 防邮箱枚举:不存在也返回成功,但不实际发送验证码
+                return;
             }
         }
 

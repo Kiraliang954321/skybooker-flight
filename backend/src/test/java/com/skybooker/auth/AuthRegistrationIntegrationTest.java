@@ -67,7 +67,7 @@ class AuthRegistrationIntegrationTest {
     }
 
     @Test
-    void sendResetCode_rejectsUnknownEmail() throws Exception {
+    void sendResetCode_unknownEmail_returnsSuccessToPreventEnumeration() throws Exception {
         SendEmailCodeDTO dto = new SendEmailCodeDTO();
         dto.setEmail("nonexistent@example.com");
         dto.setScene("RESET_PASSWORD");
@@ -75,7 +75,7 @@ class AuthRegistrationIntegrationTest {
         mockMvc.perform(post("/api/auth/email-code")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(dto)))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isOk());
     }
 
     @Test
