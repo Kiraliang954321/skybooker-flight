@@ -5,6 +5,7 @@ import com.skybooker.ai.service.AiChatService;
 import com.skybooker.ai.vo.AiChatReplyVO;
 import com.skybooker.ai.vo.AiSessionMessagesVO;
 import com.skybooker.common.response.ApiResponse;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
@@ -17,8 +18,10 @@ public class AiController {
     private final AiChatService aiChatService;
 
     @PostMapping("/chat")
-    public ApiResponse<AiChatReplyVO> chat(@Valid @RequestBody AiChatRequest request) {
-        AiChatReplyVO reply = aiChatService.chat(request.getSessionId(), request.getMessage());
+    public ApiResponse<AiChatReplyVO> chat(@Valid @RequestBody AiChatRequest request,
+                                           HttpServletRequest httpRequest) {
+        AiChatReplyVO reply = aiChatService.chat(request.getSessionId(), request.getMessage(),
+                httpRequest.getRemoteAddr());
         return ApiResponse.success(reply);
     }
 
