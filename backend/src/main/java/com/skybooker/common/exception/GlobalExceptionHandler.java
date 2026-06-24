@@ -1,6 +1,7 @@
 package com.skybooker.common.exception;
 
 import com.skybooker.common.response.ApiResponse;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
@@ -17,11 +18,13 @@ import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.util.stream.Collectors;
 
+@Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
     @ExceptionHandler(BusinessException.class)
     public ResponseEntity<ApiResponse<Void>> handleBusinessException(BusinessException e) {
+        log.debug("业务异常: code={}, message={}", e.getCode(), e.getMessage());
         return ResponseEntity.status(resolveHttpStatus(e))
                 .body(ApiResponse.error(e.getCode(), e.getMessage()));
     }
@@ -68,6 +71,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(Exception.class)
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
     public ApiResponse<Void> handleException(Exception e) {
+        log.error("未处理异常", e);
         return ApiResponse.error(ErrorCode.SYSTEM_ERROR.getCode(), ErrorCode.SYSTEM_ERROR.getMessage());
     }
 
@@ -89,7 +93,7 @@ public class GlobalExceptionHandler {
             case FLIGHT_NOT_SELLABLE, SEAT_NOT_AVAILABLE, SEAT_LOCK_FAILED, ORDER_STATE_INVALID,
                  ORDER_EXPIRED, SEAT_ALREADY_EXISTS, PASSENGER_HAS_ORDERS, DUPLICATE_PASSENGER,
                  DUPLICATE_SEAT_IN_ORDER, DUPLICATE_PASSENGER_IN_ORDER, FLIGHT_HAS_INVENTORY,
-                 ADMIN_ACCOUNT_PROTECTED, REFUND_WINDOW_CLOSED, WAITLIST_NOT_FOUND,
+                 ADMIN_ACCOUNT_PROTECTED, REFUND_WINDOW_CLOSED, CHANGE_WINDOW_CLOSED, WAITLIST_NOT_FOUND,
                  WAITLIST_STATE_INVALID, WAITLIST_NOT_NEEDED, DUPLICATE_WAITLIST_PASSENGER
                  -> HttpStatus.BAD_REQUEST;
             case SYSTEM_ERROR -> HttpStatus.INTERNAL_SERVER_ERROR;

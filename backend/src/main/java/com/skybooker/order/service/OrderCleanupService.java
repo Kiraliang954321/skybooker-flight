@@ -4,20 +4,44 @@ import com.skybooker.flight.mapper.FlightMapper;
 import com.skybooker.order.entity.TicketOrder;
 import com.skybooker.order.mapper.OrderMapper;
 import com.skybooker.order.vo.OrderVO;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
 @Service
-@RequiredArgsConstructor
 @Slf4j
 public class OrderCleanupService {
 
     private final OrderMapper orderMapper;
     private final FlightMapper flightMapper;
+    private OrderCleanupService self;
+
+    public OrderCleanupService(OrderMapper orderMapper, FlightMapper flightMapper) {
+        this.orderMapper = orderMapper;
+        this.flightMapper = flightMapper;
+    }
+
+    @Autowired
+    public void setSelf(@Lazy OrderCleanupService self) {
+        this.self = self;
+    }
+
+    @Scheduled(fixedRate = 60_000)
+    public void cleanupAllExpiredOrders() {
+        List<TicketOrder> expired = orderMapper.findExpiredPendingOrders();
+        for (TicketOrder order : expired) {
+            try {
+                self.cleanupExpiredOrder(order.getId());
+            } catch (Exception e) {
+                log.warn("Failed to cleanup expired order {}: {}", order.getId(), e.getMessage());
+            }
+        }
+    }
 
     @Transactional
     public void cleanupExpiredOrder(Long orderId) {
@@ -25,18 +49,6 @@ public class OrderCleanupService {
         if (order != null && "PENDING_PAYMENT".equals(order.getStatus())
                 && order.getExpireTime() != null && order.getExpireTime().isBefore(java.time.LocalDateTime.now())) {
             cancelSingleExpiredOrder(order);
-        }
-    }
-
-    @Transactional
-    public void cleanupAllExpiredOrders() {
-        List<TicketOrder> expired = orderMapper.findExpiredPendingOrders();
-        for (TicketOrder order : expired) {
-            try {
-                cancelSingleExpiredOrder(order);
-            } catch (Exception e) {
-                log.warn("Failed to cleanup expired order {}: {}", order.getId(), e.getMessage());
-            }
         }
     }
 

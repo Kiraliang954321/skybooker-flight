@@ -82,6 +82,7 @@ public class AuthService {
     }
 
     public void sendEmailCode(String email, String scene, String clientIp) {
+        boolean resetUnknownEmail = false;
         if ("REGISTER".equals(scene)) {
             User existing = authMapper.findByEmail(email);
             if (existing != null) {
@@ -90,7 +91,8 @@ public class AuthService {
         } else if ("RESET_PASSWORD".equals(scene)) {
             User existing = authMapper.findByEmail(email);
             if (existing == null) {
-                throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND);
+                // 防邮箱枚举:不存在也走完整冷却/限流流程,只是不发码
+                resetUnknownEmail = true;
             }
         }
 
@@ -102,6 +104,14 @@ public class AuthService {
         }
         if (codeStore.checkHourlyIpLimit(clientIp)) {
             throw new BusinessException(ErrorCode.IP_CODE_LIMIT_EXCEEDED);
+        }
+
+        if (resetUnknownEmail) {
+            // 不存在邮箱:设冷却 + 每日邮箱计数 + IP 计数(与存在一致),但不发码、不存码
+            codeStore.setResendCooldown(email, scene);
+            codeStore.incrementDailyEmailCount(email);
+            codeStore.incrementHourlyIpCount(clientIp);
+            return;
         }
 
         String code = generateCode();
