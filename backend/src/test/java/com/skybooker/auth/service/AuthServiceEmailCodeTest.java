@@ -39,7 +39,7 @@ class AuthServiceEmailCodeTest {
     @BeforeEach
     void setUp() {
         codeStore = new InMemoryVerificationCodeStore();
-        authService = new AuthService(authMapper, null, null, codeStore, mailService, new InMemoryLoginRateLimiter());
+        authService = new AuthService(authMapper, null, null, null, codeStore, mailService, new InMemoryLoginRateLimiter());
     }
 
     @Test
@@ -128,7 +128,7 @@ class AuthServiceEmailCodeTest {
         org.mockito.Mockito.when(mockStore.checkDailyEmailLimit("unknown@example.com")).thenReturn(false);
         org.mockito.Mockito.when(mockStore.checkHourlyIpLimit("1.2.3.4")).thenReturn(false);
 
-        AuthService service = new AuthService(mockMapper, null, null, mockStore, null, new InMemoryLoginRateLimiter());
+        AuthService service = new AuthService(mockMapper, null, null, null, mockStore, null, new InMemoryLoginRateLimiter());
         service.sendEmailCode("unknown@example.com", "RESET_PASSWORD", "1.2.3.4");
 
         org.mockito.Mockito.verify(mockStore).setResendCooldown("unknown@example.com", "RESET_PASSWORD");

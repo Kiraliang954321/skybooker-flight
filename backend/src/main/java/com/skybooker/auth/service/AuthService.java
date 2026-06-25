@@ -1,7 +1,5 @@
 package com.skybooker.auth.service;
 
-import com.skybooker.admin.entity.AdminUser;
-import com.skybooker.admin.mapper.AdminMapper;
 import com.skybooker.auth.dto.RegisterDTO;
 import com.skybooker.auth.dto.ResetPasswordDTO;
 import com.skybooker.auth.dto.UserLoginDTO;
@@ -17,25 +15,32 @@ import com.skybooker.common.exception.BusinessException;
 import com.skybooker.common.exception.ErrorCode;
 import com.skybooker.common.security.JwtTokenProvider;
 import com.skybooker.common.security.LoginUserPrincipal;
+import com.skybooker.common.security.RefreshTokenStore;
 import com.skybooker.common.security.SecurityUtil;
+import com.skybooker.common.security.TokenPair;
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.JwtException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.security.SecureRandom;
+import java.time.Duration;
 
 @Service
 @RequiredArgsConstructor
 public class AuthService {
 
+    private static final String PORTAL = "USER";
+    private static final SecureRandom RANDOM = new SecureRandom();
+
     private final AuthMapper authMapper;
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider jwtTokenProvider;
+    private final RefreshTokenStore refreshTokenStore;
     private final VerificationCodeStore codeStore;
     private final MailService mailService;
     private final LoginRateLimiter loginRateLimiter;
-
-    private static final SecureRandom RANDOM = new SecureRandom();
 
     public LoginVO userLogin(UserLoginDTO dto, String ip) {
         if (loginRateLimiter.isLimited(dto.getEmail(), ip)) {
@@ -58,15 +63,90 @@ public class AuthService {
         }
 
         loginRateLimiter.clear(dto.getEmail(), ip);
-        String token = jwtTokenProvider.generateToken(
-                user.getId(), user.getEmail(), user.getRole(), "USER");
+        return issueLoginVO(user);
+    }
 
+    /**
+     * 用 refresh token 换取新的 access + refresh（旋转）。refresh 必须签名有效、portal 匹配、
+     * 仍在 RefreshTokenStore 中、且账号未被禁用，任一不满足统一抛 REFRESH_TOKEN_INVALID。
+     */
+    public LoginVO refreshAccessToken(String refreshToken) {
+        RefreshClaims claims = parseRefresh(refreshToken);
+        if (!PORTAL.equals(claims.portal())) {
+            throw new BusinessException(ErrorCode.REFRESH_TOKEN_INVALID);
+        }
+
+        Long storedUserId = refreshTokenStore.findUserId(claims.portal(), claims.jti());
+        if (storedUserId == null || !storedUserId.equals(claims.userId())) {
+            throw new BusinessException(ErrorCode.REFRESH_TOKEN_INVALID);
+        }
+
+        // 全设备登出后版本号被递增，旧 token 的 tokenVer 不再匹配
+        long currentVer = refreshTokenStore.currentVersion(claims.portal(), claims.userId());
+        if (claims.tokenVer() != currentVer) {
+            throw new BusinessException(ErrorCode.REFRESH_TOKEN_INVALID);
+        }
+
+        User user = authMapper.findById(claims.userId());
+        if (user == null || !"USER".equals(user.getRole())
+                || "DISABLED".equals(user.getStatus())) {
+            throw new BusinessException(ErrorCode.REFRESH_TOKEN_INVALID);
+        }
+
+        // rotation：作废旧 refresh 后重新签发
+        refreshTokenStore.revoke(claims.portal(), claims.jti());
+        return issueLoginVO(user);
+    }
+
+    /**
+     * 作废当前 refresh token。幂等：token 为空、不可解析或已作废均返回成功。
+     */
+    public void logout(String refreshToken) {
+        if (refreshToken == null || refreshToken.isBlank()) {
+            return;
+        }
+        try {
+            Claims claims = jwtTokenProvider.parseRefreshToken(refreshToken);
+            String portal = claims.get("loginPortal", String.class);
+            String jti = claims.getId();
+            if (portal != null && jti != null) {
+                refreshTokenStore.revoke(portal, jti);
+            }
+        } catch (JwtException | IllegalArgumentException e) {
+            // token 已不可解析，refresh 记录可能已过期或不存在，幂等返回
+        }
+    }
+
+    private LoginVO issueLoginVO(User user) {
+        long tokenVer = refreshTokenStore.currentVersion(PORTAL, user.getId());
+        TokenPair pair = jwtTokenProvider.issueTokenPair(
+                user.getId(), user.getEmail(), user.getRole(), PORTAL, tokenVer);
+        refreshTokenStore.store(PORTAL, pair.jti(), user.getId(),
+                Duration.ofMillis(pair.refreshTtlMs()));
         return new LoginVO(
-                token,
+                pair.accessToken(),
+                pair.refreshToken(),
                 "Bearer",
-                jwtTokenProvider.getExpirationSeconds(),
+                pair.accessExpiresInSec(),
                 new UserVO(user.getId(), user.getEmail(), user.getNickname(), user.getRole())
         );
+    }
+
+    private RefreshClaims parseRefresh(String refreshToken) {
+        Claims claims;
+        try {
+            claims = jwtTokenProvider.parseRefreshToken(refreshToken);
+        } catch (JwtException | IllegalArgumentException e) {
+            throw new BusinessException(ErrorCode.REFRESH_TOKEN_INVALID);
+        }
+        String portal = claims.get("loginPortal", String.class);
+        Long userId = claims.get("userId", Long.class);
+        String jti = claims.getId();
+        Long tokenVer = claims.get("tokenVer", Long.class);
+        if (portal == null || userId == null || jti == null || tokenVer == null) {
+            throw new BusinessException(ErrorCode.REFRESH_TOKEN_INVALID);
+        }
+        return new RefreshClaims(portal, userId, jti, tokenVer);
     }
 
     public UserVO getCurrentUser() {
@@ -168,6 +248,8 @@ public class AuthService {
 
         authMapper.updatePassword(user.getId(), passwordEncoder.encode(dto.getNewPassword()));
         codeStore.removeCode(dto.getEmail(), "RESET_PASSWORD");
+        // 改密码后作废该用户所有已签发 refresh token，强制其他设备重新登录
+        refreshTokenStore.revokeAllByUser(PORTAL, user.getId());
     }
 
     private void validateCode(String email, String scene, String inputCode) {
@@ -183,5 +265,8 @@ public class AuthService {
 
     private String generateCode() {
         return String.format("%06d", RANDOM.nextInt(1_000_000));
+    }
+
+    private record RefreshClaims(String portal, Long userId, String jti, long tokenVer) {
     }
 }

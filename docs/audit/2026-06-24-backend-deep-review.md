@@ -134,7 +134,7 @@
 | H7 | 管理员禁用自身 | ✅ 已闭环 | ADMIN 角色整体保护(`ADMIN_ACCOUNT_PROTECTED`),强于"仅禁自身" |
 | H8 | AI 接口限流 | ✅ 已修 | PR#32 |
 | H9 | 防邮箱存在性枚举 | ✅ 已修 | PR#30 |
-| H10 | JWT TTL 24h→2h | ✅ 已修 | PR#32 |
+| H10 | JWT TTL + refresh token + logout 作废 | ✅ 已修 | PR#32(TTL) + feature/jwt-refresh-token(refresh/logout 根治 M-4/M-5) |
 | H11 | 验证码明文日志降级 DEBUG | ✅ 已修 | PR#30 |
 | H12 | DB `useSSL` 可配置 | ✅ 已修 | PR#32 |
 | H13a/b/c | utf8mb4 + CHECK + FK ON DELETE | ✅ 已修 | PR#31(V8 迁移) |

@@ -77,32 +77,18 @@ class RouteBoundaryTest extends AbstractIntegrationTest {
         assertNotEquals(403, status, "Flight routes should not require authorization");
     }
 
+    // logout 改为 permitAll：不校验 access token 的 portal，仅凭 body 中的 refresh token 作废。
+    // refresh 作废 + 旋转的端到端行为见 AuthRefreshIntegrationTest / AdminRefreshIntegrationTest。
     @Test
-    void userLogout_acceptsUserToken() throws Exception {
-        mockMvc.perform(post("/api/auth/logout")
-                        .header("Authorization", "Bearer " + userToken))
+    void userLogout_accessibleWithoutAccessToken() throws Exception {
+        mockMvc.perform(post("/api/auth/logout"))
                 .andExpect(status().isOk());
     }
 
     @Test
-    void userLogout_rejectsAdminToken() throws Exception {
-        mockMvc.perform(post("/api/auth/logout")
-                        .header("Authorization", "Bearer " + adminToken))
-                .andExpect(status().isForbidden());
-    }
-
-    @Test
-    void adminLogout_acceptsAdminToken() throws Exception {
-        mockMvc.perform(post("/api/admin/logout")
-                        .header("Authorization", "Bearer " + adminToken))
+    void adminLogout_accessibleWithoutAccessToken() throws Exception {
+        mockMvc.perform(post("/api/admin/logout"))
                 .andExpect(status().isOk());
-    }
-
-    @Test
-    void adminLogout_rejectsUserToken() throws Exception {
-        mockMvc.perform(post("/api/admin/logout")
-                        .header("Authorization", "Bearer " + userToken))
-                .andExpect(status().isForbidden());
     }
 
     @Test

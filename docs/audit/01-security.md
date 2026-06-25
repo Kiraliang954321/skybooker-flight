@@ -66,15 +66,17 @@
 - **证据**:`ORDER BY ${orderBy}`;当前经 `FlightSort` 枚举白名单映射安全,但 `FlightSearchDTO.sort` 是裸 String 无 `@Pattern`。
 - **建议**:`sort` 加 `@Pattern(regexp="DEFAULT|COMPREHENSIVE|PRICE_ASC|DURATION_ASC|TIME_ASC|SEATS_DESC|PUNCTUAL_DESC")`,或改 `<choose>` 固定列名。
 
-### M-4 logout 未使 token 失效
+### M-4 logout 未使 token 失效 ✅ 已修(feature/jwt-refresh-token)
 - **文件**:`auth/controller/AuthController.java:50-53`、`admin/controller/AdminAuthController.java:29-32`
 - **证据**:logout 仅返回 success,无黑名单/吊销。
 - **建议**:Redis 维护 JWT 黑名单(logout 写入 jti + 剩余 TTL),`JwtAuthenticationFilter` 校验时检查。
+- **处置**:改用 access(1h) + refresh(14d) 双 token,refresh 的 jti 写入 Redis;logout 删除对应 jti 完成作废,refresh 接口校验 Redis 存在性并旋转(rotation)。改密码时递增该用户的 token 版本号,使所有已签发 refresh 立即失效(全设备登出)。未采纳 access 黑名单——access 靠短 TTL + `JwtAuthenticationFilter` 每请求查 DB 账号状态作准实时吊销,维护黑名单收益不足。
 
-### M-5 JWT 默认 24h 偏长,无 Refresh Token
+### M-5 JWT 默认 24h 偏长,无 Refresh Token ✅ 已修(feature/jwt-refresh-token)
 - **文件**:`application.yml:29`
 - **证据**:`expiration: ${JWT_EXPIRATION:86400000}`(24h)。
 - **建议**:access 缩短到 1-2h + refresh token,或下调默认值并接黑名单。
+- **处置**:access 默认 1h(`JWT_ACCESS_MS=3600000`)、refresh 14d(`JWT_REFRESH_MS=1209600000`)。用户端与管理后台统一一套 TTL——安全兜底交给 Filter 账号状态校验,差异化 TTL 的边际收益不抵前后端协作复杂度。
 
 ### M-6 改签可跨舱等,金额漏洞
 - **文件**:`change/service/ChangeService.java:227-240`
