@@ -104,12 +104,14 @@ AI_LLM_API_KEY=replace-with-llm-provider-key
 AI_LLM_MODEL=gpt-4o-mini
 AI_LLM_TIMEOUT_MS=8000
 AI_LLM_MAX_RETRIES=1
+# 后台启用 LLM 时必需：apiKey 加密密钥（openssl rand -base64 32）。丢失则无法解密已入库配置，回退上面的 AI_LLM_* 默认值
+AI_CONFIG_ENC_KEY=
 
 BACKEND_PORT=8080
 NGINX_PORT=8088
 ```
 
-`MYSQL_PASSWORD`、`JWT_SECRET` 和 `RESEND_API_KEY` 应使用真实安全值，并只保存在本地 `.env`、服务器环境变量或部署平台密钥中。默认 `MAIL_PROVIDER=log` 不需要 Resend 凭据；生产发送邮件时再改为 `MAIL_PROVIDER=resend`。
+`MYSQL_PASSWORD`、`JWT_SECRET`、`RESEND_API_KEY` 和 `AI_CONFIG_ENC_KEY`（后台启用 LLM 时必需）应使用真实安全值，并只保存在本地 `.env`、服务器环境变量或部署平台密钥中。默认 `MAIL_PROVIDER=log` 不需要 Resend 凭据；生产发送邮件时再改为 `MAIL_PROVIDER=resend`。
 
 ### 2. 启动服务
 
@@ -186,6 +188,7 @@ services:
       AI_LLM_MODEL: ${AI_LLM_MODEL:-}
       AI_LLM_TIMEOUT_MS: ${AI_LLM_TIMEOUT_MS:-8000}
       AI_LLM_MAX_RETRIES: ${AI_LLM_MAX_RETRIES:-1}
+      AI_CONFIG_ENC_KEY: ${AI_CONFIG_ENC_KEY:-}
     ports:
       - "${BACKEND_PORT:-127.0.0.1:8080}:8080"
 ```
