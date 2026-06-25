@@ -159,6 +159,41 @@ class AdminAiConfigIntegrationTest extends AbstractIntegrationTest {
     }
 
     @Test
+    void put_enableWithoutApiKeyAndNoExistingKey_returns10022() throws Exception {
+        // 首次启用（DB 空）省略 apiKey → 必须拒绝，避免写入空 key 遮蔽 env fallback
+        Map<String, Object> body = Map.of(
+                "enabled", true,
+                "baseUrl", "https://provider.example/v1",
+                "model", "gpt-test");
+        mockMvc.perform(put("/api/admin/ai/llm-config")
+                .header("Authorization", "Bearer " + adminToken())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(body)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value(10022));
+
+        Integer count = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM ai_llm_config WHERE id = 1", Integer.class);
+        assertThat(count).isEqualTo(0);   // 不落库，env fallback 不被遮蔽
+    }
+
+    @Test
+    void put_blankApiKeyWhenDisabled_returns10022() throws Exception {
+        // apiKey 传了就必须非空白（即使 enabled=false）—— 与 DTO 契约一致
+        Map<String, Object> body = Map.of(
+                "enabled", false,
+                "baseUrl", "https://provider.example/v1",
+                "model", "gpt-test",
+                "apiKey", "   ");
+        mockMvc.perform(put("/api/admin/ai/llm-config")
+                .header("Authorization", "Bearer " + adminToken())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(body)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value(10022));
+    }
+
+    @Test
     void userToken_isForbidden() throws Exception {
         mockMvc.perform(get("/api/admin/ai/llm-config")
                 .header("Authorization", "Bearer " + userToken()))

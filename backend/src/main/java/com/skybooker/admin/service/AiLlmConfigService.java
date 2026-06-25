@@ -59,10 +59,10 @@ public class AiLlmConfigService {
 
     @Transactional
     public AiLlmConfigVO updateConfig(AiLlmConfigDTO dto) {
-        validate(dto);
+        AiLlmConfig existing = configMapper.findActive();
+        validate(dto, existing);
 
         Long adminId = resolveAdminId();
-        AiLlmConfig existing = configMapper.findActive();
         String apiKeyCipher = resolveCipher(dto, existing);
 
         AiLlmConfig config = new AiLlmConfig();
@@ -83,7 +83,11 @@ public class AiLlmConfigService {
         return getConfig();
     }
 
-    private void validate(AiLlmConfigDTO dto) {
+    private void validate(AiLlmConfigDTO dto, AiLlmConfig existing) {
+        // 加密密钥未配置时拒绝写入（放最前：后续 decrypt 旧 key 才安全）
+        if (!crypto.isAvailable()) {
+            throw new BusinessException(ErrorCode.AI_LLM_CONFIG_INVALID);
+        }
         Integer timeoutMs = dto.getTimeoutMs();
         if (timeoutMs != null && timeoutMs <= 0) {
             throw new BusinessException(ErrorCode.AI_LLM_CONFIG_INVALID);
@@ -92,18 +96,20 @@ public class AiLlmConfigService {
         if (maxRetries != null && maxRetries < 0) {
             throw new BusinessException(ErrorCode.AI_LLM_CONFIG_INVALID);
         }
+        // apiKey 传了就必须非空白（null/省略 = 保留旧值，空白 = 非法）—— 与 DTO 契约一致，不限于 enabled
+        if (dto.getApiKey() != null && dto.getApiKey().isBlank()) {
+            throw new BusinessException(ErrorCode.AI_LLM_CONFIG_INVALID);
+        }
         if (Boolean.TRUE.equals(dto.getEnabled())) {
             if (isBlank(dto.getBaseUrl()) || isBlank(dto.getModel())) {
                 throw new BusinessException(ErrorCode.AI_LLM_CONFIG_INVALID);
             }
-            // 显式提交了 apiKey 但为空白 → 非法（省略/传 null 才表示保留旧值）
-            if (dto.getApiKey() != null && dto.getApiKey().isBlank()) {
+            // 启用时必须有可用 key：新 key 或已存在的非空旧 key。
+            // 防止首次启用省略 apiKey → 写入空 key → DB 配置遮蔽 env fallback 却又不可用。
+            boolean hasNewKey = dto.getApiKey() != null && !dto.getApiKey().isBlank();
+            if (!hasNewKey && !hasNonBlankExistingKey(existing)) {
                 throw new BusinessException(ErrorCode.AI_LLM_CONFIG_INVALID);
             }
-        }
-        // 加密密钥未配置时拒绝写入，避免明文或空 cipher 落库
-        if (!crypto.isAvailable()) {
-            throw new BusinessException(ErrorCode.AI_LLM_CONFIG_INVALID);
         }
     }
 
@@ -114,8 +120,21 @@ public class AiLlmConfigService {
         if (existing != null && existing.getApiKeyCipher() != null) {
             return existing.getApiKeyCipher();
         }
-        // 首次创建且未提供 apiKey：加密空串占位（保证 api_key_cipher NOT NULL）
+        // disabled 且首次创建未提供 apiKey：加密空串占位（保证 api_key_cipher NOT NULL；
+        // enabled=true 时 validate 已保证有可用 key，不会走到这里）
         return crypto.encrypt("");
+    }
+
+    /** 旧 key 是否存在且解密后非空（密钥轮换等导致不可解密时视为无可用 key）。 */
+    private boolean hasNonBlankExistingKey(AiLlmConfig existing) {
+        if (existing == null || existing.getApiKeyCipher() == null) {
+            return false;
+        }
+        try {
+            return !crypto.decrypt(existing.getApiKeyCipher()).isBlank();
+        } catch (Exception e) {
+            return false;
+        }
     }
 
     private Long resolveAdminId() {
