@@ -19,24 +19,15 @@ public class RedisAiRateLimiter implements AiRateLimiter {
     private final StringRedisTemplate redisTemplate;
 
     @Override
-    public boolean isLimited(String ip) {
+    public boolean tryAcquire(String ip) {
         if (ip == null || ip.isBlank()) {
-            return false;
-        }
-        String key = KEY_PREFIX + ip;
-        String count = redisTemplate.opsForValue().get(key);
-        return count != null && Integer.parseInt(count) >= MAX_REQUESTS;
-    }
-
-    @Override
-    public void recordRequest(String ip) {
-        if (ip == null || ip.isBlank()) {
-            return;
+            return true;
         }
         String key = KEY_PREFIX + ip;
         Long count = redisTemplate.opsForValue().increment(key);
         if (count != null && count == 1) {
             redisTemplate.expire(key, WINDOW);
         }
+        return count == null || count <= MAX_REQUESTS;
     }
 }

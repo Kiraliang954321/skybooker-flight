@@ -5,6 +5,7 @@ import com.skybooker.admin.service.AdminAuthService;
 import com.skybooker.admin.vo.AdminLoginVO;
 import com.skybooker.admin.vo.AdminVO;
 import com.skybooker.common.response.ApiResponse;
+import com.skybooker.common.security.ClientIpResolver;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -20,7 +21,7 @@ public class AdminAuthController {
     @PostMapping("/auth/login")
     public ApiResponse<AdminLoginVO> login(@Valid @RequestBody AdminLoginDTO dto,
                                            HttpServletRequest request) {
-        return ApiResponse.success(adminAuthService.adminLogin(dto, request.getRemoteAddr()));
+        return ApiResponse.success(adminAuthService.adminLogin(dto, ClientIpResolver.resolve(request)));
     }
 
     @GetMapping("/me")

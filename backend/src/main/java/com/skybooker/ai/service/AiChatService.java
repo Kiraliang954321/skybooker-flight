@@ -47,10 +47,9 @@ public class AiChatService {
 
     @Transactional
     public AiChatReplyVO chat(String sessionId, String message, String clientIp) {
-        if (aiRateLimiter.isLimited(clientIp)) {
+        if (!aiRateLimiter.tryAcquire(clientIp)) {
             throw new BusinessException(ErrorCode.AI_RATE_LIMITED);
         }
-        aiRateLimiter.recordRequest(clientIp);
 
         Long currentUserId = SecurityUtil.getCurrentUserId();
         AiChatSession session;
