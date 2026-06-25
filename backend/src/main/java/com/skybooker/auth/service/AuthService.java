@@ -246,8 +246,14 @@ public class AuthService {
 
         authMapper.updatePassword(user.getId(), passwordEncoder.encode(dto.getNewPassword()));
         codeStore.removeCode(dto.getEmail(), "RESET_PASSWORD");
-        // 改密码后作废该用户所有已签发 refresh token，强制其他设备重新登录
-        refreshTokenStore.revokeAllByUser(PORTAL, user.getId());
+        // 改密码后作废该用户所有会话：USER / ADMIN 入口都 bump。
+        // 管理员账号的密码也存 users 表，只 bump USER 会让旧 admin token 继续可用。
+        revokeAllSessions(user.getId());
+    }
+
+    private void revokeAllSessions(Long userId) {
+        refreshTokenStore.revokeAllByUser("USER", userId);
+        refreshTokenStore.revokeAllByUser("ADMIN", userId);
     }
 
     private void validateCode(String email, String scene, String inputCode) {
