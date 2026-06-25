@@ -270,6 +270,48 @@ class RefundIntegrationTest {
         assertThat(available).isEqualTo(12);
     }
 
+    // ---- H3: 退款按 order_passenger.seat_id 快照释放,不按 orderId 全量 ----
+
+    @Test
+    void refund_releasesOnlySnapshotSeats_keepsStaleOrderIdSoldUntouched() throws Exception {
+        Long flightId = createFlight(LocalDateTime.now().plusDays(3));
+        Long orderId = createAndPayOrder(flightId);
+
+        // 当前订单关联的快照座位(order_passenger.seat_id)
+        Long snapshotSeatId = jdbcTemplate.queryForObject(
+                "SELECT seat_id FROM order_passenger WHERE order_id = ?", Long.class, orderId);
+
+        // 造脏数据:同航班另一 AVAILABLE 座位被标为 SOLD 且 locked_by_order_id 指向本订单,
+        // 模拟 "orderId 名下残留非快照 SOLD"(异常/并发/历史数据)。它不属于 order_passenger 快照。
+        Long staleSeatId = jdbcTemplate.queryForObject(
+                "SELECT id FROM flight_seat WHERE flight_id = ? AND status = 'AVAILABLE' LIMIT 1",
+                Long.class, flightId);
+        jdbcTemplate.update(
+                "UPDATE flight_seat SET status = 'SOLD', locked_by_order_id = ?, version = version + 1 WHERE id = ?",
+                orderId, staleSeatId);
+
+        mockMvc.perform(refund(orderId, userToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.status").value("SUCCESS"));
+
+        // 快照座位应被释放
+        var snapshotSeat = jdbcTemplate.queryForMap(
+                "SELECT status, locked_by_order_id FROM flight_seat WHERE id = ?", snapshotSeatId);
+        assertThat(snapshotSeat.get("status")).isEqualTo("AVAILABLE");
+        assertThat(snapshotSeat.get("locked_by_order_id")).isNull();
+
+        // 脏数据座位必须保持 SOLD —— 按 orderId 全量释放会误放它(H3 病灶)
+        var staleSeat = jdbcTemplate.queryForMap(
+                "SELECT status, locked_by_order_id FROM flight_seat WHERE id = ?", staleSeatId);
+        assertThat(staleSeat.get("status")).isEqualTo("SOLD");
+        assertThat(staleSeat.get("locked_by_order_id")).isEqualTo(orderId);
+
+        // 余票按 passengerCount(=1) 回补,而非按 orderId 名下 SOLD 数(=2)
+        Integer remaining = jdbcTemplate.queryForObject(
+                "SELECT remaining_seats FROM flight WHERE id = ?", Integer.class, flightId);
+        assertThat(remaining).isEqualTo(12);
+    }
+
     // ---- Reason validation ----
 
     @Test
