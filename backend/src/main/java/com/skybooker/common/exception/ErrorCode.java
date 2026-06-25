@@ -17,6 +17,7 @@ public enum ErrorCode {
     ACCOUNT_DISABLED(10008, "账号已被禁用"),
     ACCOUNT_TYPE_MISMATCH(10012, "账号类型不允许登录当前入口"),
     TOKEN_INVALID(10018, "Token 无效"),
+    REFRESH_TOKEN_INVALID(10021, "刷新令牌无效或已过期"),
     TOKEN_EXPIRED(10011, "Token 已失效"),
     VERIFICATION_CODE_INVALID(10004, "验证码无效或已过期"),
     VERIFICATION_CODE_SEND_TOO_FREQUENT(10005, "验证码发送过于频繁"),
