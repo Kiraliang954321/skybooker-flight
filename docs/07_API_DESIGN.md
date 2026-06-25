@@ -634,6 +634,7 @@ PUT /api/admin/ai/llm-config
 ```json
 {
   "code": 200,
+  "message": "success",
   "data": {
     "enabled": true,
     "baseUrl": "https://api.openai.com/v1",
@@ -648,7 +649,7 @@ PUT /api/admin/ai/llm-config
 }
 ```
 
-`source` 标识配置来源：`db`（后台管理记录）或 `env-default`（环境变量 fallback，此时 `updatedBy`/`updatedAt` 为空）。
+`source` 标识配置来源：`db`（后台管理记录）或 `env-default`（环境变量 fallback）。`updatedBy`/`updatedAt` 反映数据库 `ai_llm_config` 记录的最近修改信息：仅当数据库无该记录时为空；若记录存在但因 `AI_CONFIG_ENC_KEY` 缺失/非法或解密失败而 fallback 到环境变量（`source=env-default`），仍会返回该记录的修改信息。
 
 `PUT` 请求：
 
