@@ -20,6 +20,7 @@ import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilde
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -312,6 +313,47 @@ class RefundIntegrationTest {
         assertThat(remaining).isEqualTo(12);
     }
 
+    // ---- H3: cabinClasses 同样基于快照,脏 SOLD 的舱位不触发候补兑现 ----
+
+    @Test
+    void refund_cabinClassesFromSnapshot_excludesStaleSoldCabin() throws Exception {
+        Long flightId = createFlight(LocalDateTime.now().plusDays(3));
+        Long orderId = createAndPayOrder(flightId);
+
+        Long snapshotSeatId = jdbcTemplate.queryForObject(
+                "SELECT seat_id FROM order_passenger WHERE order_id = ?", Long.class, orderId);
+
+        // 造脏数据:同航班另一 AVAILABLE 座位改为 BUSINESS + SOLD + locked_by_order_id=orderId
+        // (BUSINESS 与快照座位的 ECONOMY 不同 cabin)
+        Long staleSeatId = jdbcTemplate.queryForObject(
+                "SELECT id FROM flight_seat WHERE flight_id = ? AND status = 'AVAILABLE' LIMIT 1",
+                Long.class, flightId);
+        jdbcTemplate.update(
+                "UPDATE flight_seat SET cabin_class='BUSINESS', status='SOLD', locked_by_order_id=?, version=version+1 WHERE id=?",
+                orderId, staleSeatId);
+
+        // BUSINESS cabin 现仅 1 个 SOLD 脏座位(AVAILABLE=0),满足候补创建条件
+        Long businessPaxId = createPassenger("BusinessCabinPax");
+        Long businessWlId = createWaitlist(flightId, "BUSINESS", businessPaxId);
+
+        mockMvc.perform(refund(orderId, userToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.status").value("SUCCESS"));
+
+        // 快照 ECONOMY 座位释放;脏 BUSINESS 座位保持 SOLD
+        assertThat(seatStatus(snapshotSeatId)).isEqualTo("AVAILABLE");
+        assertThat(seatStatus(staleSeatId)).isEqualTo("SOLD");
+
+        // H3 关键:cabinClasses 只含快照座位 cabin(ECONOMY),不含脏座位 cabin(BUSINESS),
+        // 故 BUSINESS 候补不应被退款候补兑现触及 —— status 仍 WAITING 且无 skip_reason。
+        // 旧代码 findCabinClassesByOrderId 会把 BUSINESS 纳入并尝试兑现,因 BUSINESS 无 AVAILABLE
+        // 座位而写 last_skip_reason("可用座位不足"),此处可区分新旧实现。
+        Map<String, Object> wl = jdbcTemplate.queryForMap(
+                "SELECT status, last_skip_reason FROM waitlist_order WHERE id = ?", businessWlId);
+        assertThat(wl.get("status")).isEqualTo("WAITING");
+        assertThat(wl.get("last_skip_reason")).isNull();
+    }
+
     // ---- Reason validation ----
 
     @Test
@@ -447,5 +489,41 @@ class RefundIntegrationTest {
                         "VALUES(?, ?, ?, ?, 500, 50, 30, 0, 580)",
                 "TEST" + System.currentTimeMillis(), userId, flightId, status);
         return jdbcTemplate.queryForObject("SELECT LAST_INSERT_ID()", Long.class);
+    }
+
+    private String seatStatus(Long seatId) {
+        return jdbcTemplate.queryForObject(
+                "SELECT status FROM flight_seat WHERE id = ?", String.class, seatId);
+    }
+
+    private Long createPassenger(String name) throws Exception {
+        String idCard = "310101" + String.format("%012d",
+                Math.floorMod(System.nanoTime(), 1_000_000_000_000L));
+        MvcResult result = mockMvc.perform(post("/api/passengers")
+                        .header("Authorization", "Bearer " + userToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"" + name + "\",\"idCardNo\":\"" + idCard
+                                + "\",\"passengerType\":\"ADULT\",\"phone\":\"13900001111\"}"))
+                .andExpect(status().isOk())
+                .andReturn();
+        return objectMapper.readTree(result.getResponse().getContentAsString())
+                .get("data").get("id").asLong();
+    }
+
+    private Long createWaitlist(Long flightId, String cabinClass, Long passengerId) throws Exception {
+        MvcResult result = mockMvc.perform(post("/api/waitlist")
+                        .header("Authorization", "Bearer " + userToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"flightId\":" + flightId
+                                + ",\"cabinClass\":\"" + cabinClass + "\""
+                                + ",\"passengerIds\":[" + passengerId + "]}"))
+                .andExpect(status().isOk())
+                .andReturn();
+        Long wlId = objectMapper.readTree(result.getResponse().getContentAsString())
+                .get("data").get("id").asLong();
+        mockMvc.perform(post("/api/waitlist/" + wlId + "/pay")
+                        .header("Authorization", "Bearer " + userToken))
+                .andExpect(status().isOk());
+        return wlId;
     }
 }

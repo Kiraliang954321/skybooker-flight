@@ -80,7 +80,9 @@ public class RefundService {
         // incrementRemainingSeats(当前航班) 与实际释放座位所属航班错配。
         List<OrderPassenger> passengers = orderMapper.findPassengersByOrderId(orderId);
         List<Long> refundSeatIds = passengers.stream().map(OrderPassenger::getSeatId).toList();
-        List<String> cabinClasses = flightMapper.findCabinClassesByOrderId(orderId);
+        // H3: cabinClasses 同样基于 refundSeatIds 快照,与"释放哪些座位""回补多少余票"范围一致,
+        // 避免 orderId 名下脏 SOLD 的舱位错误进入候补兑现流程。
+        List<String> cabinClasses = flightMapper.findCabinClassesBySeatIds(refundSeatIds);
 
         int released = flightMapper.releaseSoldSeatsBySeatIds(refundSeatIds);
         if (released != refundSeatIds.size()) {
