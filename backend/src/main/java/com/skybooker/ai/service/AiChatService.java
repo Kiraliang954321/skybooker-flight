@@ -13,6 +13,7 @@ import com.skybooker.ai.mapper.AiMapper;
 import com.skybooker.ai.parser.IntentParser;
 import com.skybooker.ai.parser.IntentParserService;
 import com.skybooker.ai.parser.ParsedCondition;
+import com.skybooker.ai.ratelimit.AiRateLimiter;
 import com.skybooker.ai.vo.AiChatReplyVO;
 import com.skybooker.ai.vo.AiSessionMessageVO;
 import com.skybooker.ai.vo.AiSessionMessagesVO;
@@ -42,9 +43,14 @@ public class AiChatService {
     private final FlightRecommendationService flightRecommendationService;
     private final FlightMapper flightMapper;
     private final ObjectMapper objectMapper;
+    private final AiRateLimiter aiRateLimiter;
 
     @Transactional
-    public AiChatReplyVO chat(String sessionId, String message) {
+    public AiChatReplyVO chat(String sessionId, String message, String clientIp) {
+        if (!aiRateLimiter.tryAcquire(clientIp)) {
+            throw new BusinessException(ErrorCode.AI_RATE_LIMITED);
+        }
+
         Long currentUserId = SecurityUtil.getCurrentUserId();
         AiChatSession session;
 

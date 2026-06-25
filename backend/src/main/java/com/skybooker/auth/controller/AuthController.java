@@ -5,6 +5,7 @@ import com.skybooker.auth.service.AuthService;
 import com.skybooker.auth.vo.LoginVO;
 import com.skybooker.auth.vo.UserVO;
 import com.skybooker.common.response.ApiResponse;
+import com.skybooker.common.security.ClientIpResolver;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -20,13 +21,13 @@ public class AuthController {
     @PostMapping("/login")
     public ApiResponse<LoginVO> login(@Valid @RequestBody UserLoginDTO dto,
                                       HttpServletRequest request) {
-        return ApiResponse.success(authService.userLogin(dto, request.getRemoteAddr()));
+        return ApiResponse.success(authService.userLogin(dto, ClientIpResolver.resolve(request)));
     }
 
     @PostMapping("/email-code")
     public ApiResponse<Void> sendEmailCode(@Valid @RequestBody SendEmailCodeDTO dto,
                                            HttpServletRequest request) {
-        String clientIp = request.getRemoteAddr();
+        String clientIp = ClientIpResolver.resolve(request);
         authService.sendEmailCode(dto.getEmail(), dto.getScene(), clientIp);
         return ApiResponse.success();
     }

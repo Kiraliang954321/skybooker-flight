@@ -38,6 +38,7 @@
 | 10017 | LOGIN_RATE_LIMITED | 登录失败次数过多 | 429 |
 | 10018 | TOKEN_INVALID | Token 无效 | 401 |
 | 10019 | ADMIN_PROFILE_DISABLED | 管理员账号已被禁用 | 403 |
+| 10020 | AI_RATE_LIMITED | 请求过于频繁，请稍后再试 | 429 |
 | 20001 | RESOURCE_NOT_FOUND | 资源不存在 | 404 |
 | 30001 | FLIGHT_NOT_SELLABLE | 航班不可预订 | 400 |
 | 30002 | SEAT_NOT_AVAILABLE | 座位不可用 | 400 |
