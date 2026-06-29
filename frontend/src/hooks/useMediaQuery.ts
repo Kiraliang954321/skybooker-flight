@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useSyncExternalStore } from "react"
 
 /**
  * 响应式断点检测 hook
@@ -8,18 +8,16 @@ import { useState, useEffect } from "react"
  * @returns 是否匹配
  */
 export function useMediaQuery(query: string): boolean {
-  const [matches, setMatches] = useState(false)
-
-  useEffect(() => {
+  const subscribe = (callback: () => void) => {
     const mql = window.matchMedia(query)
-    setMatches(mql.matches)
+    mql.addEventListener("change", callback)
+    return () => mql.removeEventListener("change", callback)
+  }
 
-    const handler = (e: MediaQueryListEvent) => setMatches(e.matches)
-    mql.addEventListener("change", handler)
-    return () => mql.removeEventListener("change", handler)
-  }, [query])
-
-  return matches
+  return useSyncExternalStore(
+    subscribe,
+    () => window.matchMedia(query).matches,
+  )
 }
 
 /** 便捷断点：>= 768px */

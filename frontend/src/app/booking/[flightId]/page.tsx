@@ -236,11 +236,13 @@ export default function BookingPage() {
               <div className="flex items-center justify-between mb-4">
                 <h2 className="font-semibold">选择乘机人</h2>
                 <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
-                  <DialogTrigger asChild>
-                    <Button variant="outline" size="sm" className="gap-1">
-                      <Plus className="h-3.5 w-3.5" /> 新增乘机人
-                    </Button>
-                  </DialogTrigger>
+                  <DialogTrigger
+                    render={
+                      <Button variant="outline" size="sm" className="gap-1">
+                        <Plus className="h-3.5 w-3.5" /> 新增乘机人
+                      </Button>
+                    }
+                  />
                   <DialogContent>
                     <DialogHeader>
                       <DialogTitle>新增乘机人</DialogTitle>
@@ -294,7 +296,7 @@ export default function BookingPage() {
                 <Skeleton className="h-32 w-full rounded-xl" />
               ) : booking.myPassengers.length === 0 ? (
                 <p className="text-sm text-muted-foreground text-center py-8">
-                  暂无常用乘机人，请点击"新增乘机人"添加
+                  暂无常用乘机人，请点击&ldquo;新增乘机人&rdquo;添加
                 </p>
               ) : (
                 <div className="space-y-2">

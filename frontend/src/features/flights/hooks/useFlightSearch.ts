@@ -27,9 +27,6 @@ export function useFlightSearch(): UseFlightSearchReturn {
   const size = Number(searchParams.get("size") || "10")
 
   const fetchFlights = useCallback(async () => {
-    setIsLoading(true)
-    setError(null)
-
     try {
       const params: Record<string, string | number | boolean | undefined> = {}
       const departureCity = searchParams.get("departureCity")
@@ -67,6 +64,7 @@ export function useFlightSearch(): UseFlightSearchReturn {
       const data = await flightApi.searchFlights(params)
       setFlights(data.records)
       setTotal(data.total)
+      setError(null)
     } catch (err) {
       const apiErr = err as ApiError
       setError(apiErr.message || "搜索航班失败")

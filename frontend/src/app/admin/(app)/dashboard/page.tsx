@@ -4,10 +4,8 @@ import { useEffect, useState } from "react"
 import {
   DollarSign,
   Users,
-  PlaneTakeoff,
   Ticket,
   TrendingUp,
-  Loader2,
 } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -45,8 +43,6 @@ export default function AdminDashboardPage() {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    setIsLoading(true)
-    setError(null)
     Promise.all([
       adminApi.getDashboardSummary(),
       adminApi.getHotRoutes(),
@@ -137,7 +133,7 @@ export default function AdminDashboardPage() {
                   width={100}
                 />
                 <Tooltip
-                  formatter={(value: number) => [`${value} 单`, "订单数"]}
+                  formatter={(value) => [`${value} 单`, "订单数"]}
                   labelFormatter={(_, payload) => {
                     const d = payload?.[0]?.payload
                     return d ? `${d.departureCity} → ${d.arrivalCity}` : ""
@@ -162,16 +158,16 @@ export default function AdminDashboardPage() {
                   cx="50%"
                   cy="50%"
                   outerRadius={100}
-                  label={({ status, count }) => `${STATUS_LABELS[status] || status}: ${count}`}
+                  label={({ payload }) => `${STATUS_LABELS[payload.status] || payload.status}: ${payload.count}`}
                 >
                   {statusDist.map((_, i) => (
                     <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
                   ))}
                 </Pie>
                 <Tooltip
-                  formatter={(value: number, name: string) => [
+                  formatter={(value, name) => [
                     `${value} 单`,
-                    STATUS_LABELS[name] || name,
+                    STATUS_LABELS[name as string] || name,
                   ]}
                 />
               </PieChart>

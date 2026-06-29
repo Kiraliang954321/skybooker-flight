@@ -43,14 +43,13 @@ export default function AdminUsersPage() {
   const [actionLoading, setActionLoading] = useState(false)
 
   const fetchUsers = useCallback(async () => {
-    setIsLoading(true)
-    setError(null)
     try {
       const params: Record<string, string | number | boolean | undefined> = { page, size: 10, role: "USER" }
       if (emailFilter) params.email = emailFilter
       const data = await adminApi.getUsers(params)
       setUsers(data.records)
       setTotal(data.total)
+      setError(null)
     } catch (err) {
       setError((err as ApiError).message || "加载用户失败")
     } finally {
@@ -71,6 +70,7 @@ export default function AdminUsersPage() {
         await adminApi.enableUser(confirmAction.user.id)
       }
       setConfirmOpen(false)
+      setIsLoading(true)
       fetchUsers()
     } catch (err) {
       setActionErr((err as ApiError).message || "操作失败")
@@ -99,9 +99,9 @@ export default function AdminUsersPage() {
           placeholder="搜索邮箱..."
           className="w-60"
           value={emailFilter}
-          onChange={(e) => { setEmailFilter(e.target.value); setPage(1) }}
+          onChange={(e) => { setIsLoading(true); setEmailFilter(e.target.value); setPage(1) }}
         />
-        <Button variant="outline" size="sm" onClick={() => { setEmailFilter(""); setPage(1) }}>清除</Button>
+        <Button variant="outline" size="sm" onClick={() => { setIsLoading(true); setEmailFilter(""); setPage(1) }}>清除</Button>
       </div>
 
       {/* Table */}
@@ -172,11 +172,11 @@ export default function AdminUsersPage() {
 
       {totalPages > 1 && (
         <div className="flex items-center justify-center gap-2">
-          <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage(page - 1)}>
+          <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => { setIsLoading(true); setPage(page - 1) }}>
             <ChevronLeft className="h-4 w-4" />
           </Button>
           <span className="text-sm text-muted-foreground">{page} / {totalPages}</span>
-          <Button variant="outline" size="sm" disabled={page >= totalPages} onClick={() => setPage(page + 1)}>
+          <Button variant="outline" size="sm" disabled={page >= totalPages} onClick={() => { setIsLoading(true); setPage(page + 1) }}>
             <ChevronRight className="h-4 w-4" />
           </Button>
         </div>

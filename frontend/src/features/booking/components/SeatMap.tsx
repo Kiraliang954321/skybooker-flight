@@ -24,7 +24,7 @@ function getColor(seat: FlightSeatVO, isSelected: boolean): string {
   return "bg-white text-slate-700 border-emerald-300 hover:border-emerald-500 hover:bg-emerald-50 cursor-pointer"
 }
 
-export function SeatMap({ seats, selectedSeatIds, maxSelect, onToggleSeat }: SeatMapProps) {
+export function SeatMap({ seats, selectedSeatIds, maxSelect: _maxSelect, onToggleSeat }: SeatMapProps) {
   // 按行号分组
   const rowMap = new Map<number, Map<string, FlightSeatVO>>()
   for (const seat of seats) {
