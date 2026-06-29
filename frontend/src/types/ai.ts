@@ -23,15 +23,23 @@ export interface AiChatReplyVO {
   quickActions?: QuickAction[]
 }
 
-/** AI 对话消息 */
-export interface AiSessionMessageVO {
-  id: number
-  sessionId: string
-  role: "USER" | "ASSISTANT"
-  content: string
+/** AI 历史消息的 extra 字段（后端扁平存储） */
+export interface AiSessionMessageExtra {
   replyType?: AiReplyType
+  parsedCondition?: Record<string, string>
+  missingFields?: string[]
+  followUpQuestion?: string
+  searchUrl?: string
   flights?: FlightVO[]
   quickActions?: QuickAction[]
+}
+
+/** AI 对话消息（匹配后端 /api/ai/sessions/:id/messages 返回） */
+export interface AiSessionMessageVO {
+  role: "USER" | "ASSISTANT"
+  content: string
+  messageType: "TEXT" | "AI_REPLY"
+  extra?: AiSessionMessageExtra
   createdAt: string
 }
 
