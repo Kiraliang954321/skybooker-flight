@@ -1,5 +1,5 @@
 /** AI 回复类型 */
-export type AiReplyType = "TEXT" | "FLIGHT_RECOMMENDATION" | "MISSING_INFO" | "SEARCH_RESULT"
+export type AiReplyType = "FLIGHT_RECOMMENDATION" | "FOLLOW_UP" | "NO_RESULT"
 
 /** 快捷操作 */
 export interface QuickAction {
