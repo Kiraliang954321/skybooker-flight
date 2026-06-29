@@ -9,6 +9,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
@@ -20,6 +21,7 @@ import static org.hamcrest.Matchers.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
+@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
 class AiIntegrationTest extends AbstractIntegrationTest {
 
     @Autowired
@@ -722,7 +724,7 @@ class AiIntegrationTest extends AbstractIntegrationTest {
     private String obtainAdminToken() throws Exception {
         com.skybooker.admin.dto.AdminLoginDTO dto = new com.skybooker.admin.dto.AdminLoginDTO();
         dto.setUsername("admin");
-        dto.setPassword("Admin@123456");
+        dto.setPassword("SkyBooker@Init2026!");
 
         MvcResult result = mockMvc.perform(post("/api/admin/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)

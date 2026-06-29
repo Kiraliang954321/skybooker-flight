@@ -8,6 +8,7 @@ import lombok.Data;
 public class AdminLoginVO {
 
     private String accessToken;
+    private String refreshToken;
     private String tokenType;
     private long expiresIn;
     private AdminVO admin;

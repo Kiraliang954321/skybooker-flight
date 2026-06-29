@@ -5,6 +5,7 @@ import com.skybooker.common.exception.ErrorCode;
 import com.skybooker.common.security.SecurityUtil;
 import com.skybooker.flight.entity.Flight;
 import com.skybooker.flight.mapper.FlightMapper;
+import com.skybooker.order.entity.OrderPassenger;
 import com.skybooker.order.entity.TicketOrder;
 import com.skybooker.order.mapper.OrderMapper;
 import com.skybooker.refund.entity.RefundRecord;
@@ -12,8 +13,11 @@ import com.skybooker.refund.mapper.RefundMapper;
 import com.skybooker.refund.vo.RefundVO;
 import com.skybooker.waitlist.service.WaitlistFulfillmentService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -23,6 +27,7 @@ import java.util.List;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class RefundService {
 
     private final OrderMapper orderMapper;
@@ -31,7 +36,7 @@ public class RefundService {
     private final WaitlistFulfillmentService waitlistFulfillmentService;
 
     @Transactional
-    public RefundVO refundOrder(Long orderId) {
+    public RefundVO refundOrder(Long orderId, String reason) {
         Long userId = SecurityUtil.getCurrentUserId();
         TicketOrder order = orderMapper.findById(orderId);
         if (order == null || !order.getUserId().equals(userId)) {
@@ -63,22 +68,43 @@ public class RefundService {
         RefundRecord record = new RefundRecord();
         record.setOrderId(orderId);
         record.setUserId(userId);
-        record.setReason("用户主动退款");
+        record.setReason(reason);
         record.setRefundAmount(refundAmount);
         record.setFeeAmount(feeAmount);
         record.setStatus("SUCCESS");
         refundMapper.insertRefundRecord(record);
 
-        int passengerCount = countOrderPassengers(orderId);
-        List<String> cabinClasses = flightMapper.findCabinClassesByOrderId(orderId);
+        // H3: 按 order_passenger.seat_id 快照释放座位,而非按 orderId 全量。
+        // 改签后 order_passenger.seat_id 已更新为新座,此处只释放当前关联座位,
+        // 避免 orderId 名下残留脏 SOLD(异常/并发历史数据)被误释放,导致
+        // incrementRemainingSeats(当前航班) 与实际释放座位所属航班错配。
+        List<OrderPassenger> passengers = orderMapper.findPassengersByOrderId(orderId);
+        List<Long> refundSeatIds = passengers.stream().map(OrderPassenger::getSeatId).toList();
+        // H3: cabinClasses 同样基于 refundSeatIds 快照,与"释放哪些座位""回补多少余票"范围一致,
+        // 避免 orderId 名下脏 SOLD 的舱位错误进入候补兑现流程。
+        List<String> cabinClasses = flightMapper.findCabinClassesBySeatIds(refundSeatIds);
 
-        flightMapper.releaseSoldSeatsByOrderId(orderId);
+        int released = flightMapper.releaseSoldSeatsBySeatIds(refundSeatIds);
+        if (released != refundSeatIds.size()) {
+            throw new BusinessException(ErrorCode.SYSTEM_ERROR);
+        }
+        int passengerCount = passengers.size();
         flightMapper.incrementRemainingSeats(order.getFlightId(), passengerCount);
 
-        for (String cabinClass : cabinClasses) {
-            waitlistFulfillmentService.tryFulfillWaitlists(
-                    order.getFlightId(), cabinClass, passengerCount);
-        }
+        final Long flightId = order.getFlightId();
+        final int pCount = passengerCount;
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                for (String cabinClass : cabinClasses) {
+                    try {
+                        waitlistFulfillmentService.tryFulfillWaitlists(flightId, cabinClass, pCount);
+                    } catch (Exception e) {
+                        log.warn("候补兑现失败(退款已提交)order={}, cabin={}", orderId, cabinClass, e);
+                    }
+                }
+            }
+        });
 
         return refundMapper.findByOrderId(orderId);
     }
@@ -100,10 +126,5 @@ public class RefundService {
 
     private boolean isRefundableStatus(String status) {
         return "ISSUED".equals(status) || "CHANGED".equals(status);
-    }
-
-    private int countOrderPassengers(Long orderId) {
-        com.skybooker.order.vo.OrderVO detail = orderMapper.findDetailById(orderId);
-        return detail != null && detail.getPassengers() != null ? detail.getPassengers().size() : 0;
     }
 }

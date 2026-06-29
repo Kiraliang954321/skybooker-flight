@@ -15,10 +15,12 @@ import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
+import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -58,8 +60,7 @@ class RefundIntegrationTest {
         Long flightId = createFlight(LocalDateTime.now().plusDays(3));
         Long orderId = createAndPayOrder(flightId);
 
-        mockMvc.perform(post("/api/orders/" + orderId + "/refund")
-                        .header("Authorization", "Bearer " + userToken))
+        mockMvc.perform(refund(orderId, userToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(200))
                 .andExpect(jsonPath("$.data.orderId").value(orderId))
@@ -77,8 +78,7 @@ class RefundIntegrationTest {
         Long flightId = createFlight(LocalDateTime.now().plusHours(5));
         Long orderId = createAndPayOrder(flightId);
 
-        mockMvc.perform(post("/api/orders/" + orderId + "/refund")
-                        .header("Authorization", "Bearer " + userToken))
+        mockMvc.perform(refund(orderId, userToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.feeAmount").value(174.00))
                 .andExpect(jsonPath("$.data.refundAmount").value(406.00));
@@ -105,8 +105,7 @@ class RefundIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.status").value("CHANGED"));
 
-        mockMvc.perform(post("/api/orders/" + orderId + "/refund")
-                        .header("Authorization", "Bearer " + userToken))
+        mockMvc.perform(refund(orderId, userToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(200))
                 .andExpect(jsonPath("$.data.orderId").value(orderId))
@@ -146,8 +145,7 @@ class RefundIntegrationTest {
         jdbcTemplate.update("UPDATE flight SET departure_time = ? WHERE id = ?",
                 LocalDateTime.now().plusHours(24).plusSeconds(30), flightId);
 
-        mockMvc.perform(post("/api/orders/" + orderId + "/refund")
-                        .header("Authorization", "Bearer " + userToken))
+        mockMvc.perform(refund(orderId, userToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.feeAmount").value(58.00))
                 .andExpect(jsonPath("$.data.refundAmount").value(522.00));
@@ -160,8 +158,7 @@ class RefundIntegrationTest {
         jdbcTemplate.update("UPDATE flight SET departure_time = ? WHERE id = ?",
                 LocalDateTime.now().plusHours(24).minusSeconds(30), flightId);
 
-        mockMvc.perform(post("/api/orders/" + orderId + "/refund")
-                        .header("Authorization", "Bearer " + userToken))
+        mockMvc.perform(refund(orderId, userToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.feeAmount").value(174.00))
                 .andExpect(jsonPath("$.data.refundAmount").value(406.00));
@@ -174,8 +171,7 @@ class RefundIntegrationTest {
         jdbcTemplate.update("UPDATE flight SET departure_time = ? WHERE id = ?",
                 LocalDateTime.now().plusHours(2).plusSeconds(30), flightId);
 
-        mockMvc.perform(post("/api/orders/" + orderId + "/refund")
-                        .header("Authorization", "Bearer " + userToken))
+        mockMvc.perform(refund(orderId, userToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.feeAmount").value(174.00))
                 .andExpect(jsonPath("$.data.refundAmount").value(406.00));
@@ -188,8 +184,7 @@ class RefundIntegrationTest {
         jdbcTemplate.update("UPDATE flight SET departure_time = ? WHERE id = ?",
                 LocalDateTime.now().plusHours(2).minusMinutes(1), flightId);
 
-        mockMvc.perform(post("/api/orders/" + orderId + "/refund")
-                        .header("Authorization", "Bearer " + userToken))
+        mockMvc.perform(refund(orderId, userToken))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value(50001));
     }
@@ -201,8 +196,7 @@ class RefundIntegrationTest {
         Long flightId = createFlight(LocalDateTime.now().plusHours(1));
         Long orderId = createAndPayOrder(flightId);
 
-        mockMvc.perform(post("/api/orders/" + orderId + "/refund")
-                        .header("Authorization", "Bearer " + userToken))
+        mockMvc.perform(refund(orderId, userToken))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value(50001));
     }
@@ -212,8 +206,7 @@ class RefundIntegrationTest {
         Long flightId = createFlight(LocalDateTime.now().plusDays(3));
         Long orderId = createAndPayOrder(flightId);
 
-        mockMvc.perform(post("/api/orders/" + orderId + "/refund")
-                        .header("Authorization", "Bearer " + adminToken))
+        mockMvc.perform(refund(orderId, adminToken))
                 .andExpect(status().isForbidden());
     }
 
@@ -222,14 +215,12 @@ class RefundIntegrationTest {
         Long flightId = createFlight(LocalDateTime.now().plusDays(3));
         Long orderId = createIssuedOrderViaDb(flightId, "PENDING_PAYMENT");
 
-        mockMvc.perform(post("/api/orders/" + orderId + "/refund")
-                        .header("Authorization", "Bearer " + userToken))
+        mockMvc.perform(refund(orderId, userToken))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value(40001));
 
         Long orderId2 = createIssuedOrderViaDb(flightId, "CANCELLED");
-        mockMvc.perform(post("/api/orders/" + orderId2 + "/refund")
-                        .header("Authorization", "Bearer " + userToken))
+        mockMvc.perform(refund(orderId2, userToken))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value(40001));
     }
@@ -241,13 +232,11 @@ class RefundIntegrationTest {
         Long flightId = createFlight(LocalDateTime.now().plusDays(3));
         Long orderId = createAndPayOrder(flightId);
 
-        mockMvc.perform(post("/api/orders/" + orderId + "/refund")
-                        .header("Authorization", "Bearer " + userToken))
+        mockMvc.perform(refund(orderId, userToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.status").value("SUCCESS"));
 
-        mockMvc.perform(post("/api/orders/" + orderId + "/refund")
-                        .header("Authorization", "Bearer " + userToken))
+        mockMvc.perform(refund(orderId, userToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.status").value("SUCCESS"));
 
@@ -268,8 +257,7 @@ class RefundIntegrationTest {
                 Integer.class, flightId);
         assertThat(soldBefore).isEqualTo(1);
 
-        mockMvc.perform(post("/api/orders/" + orderId + "/refund")
-                        .header("Authorization", "Bearer " + userToken))
+        mockMvc.perform(refund(orderId, userToken))
                 .andExpect(status().isOk());
 
         Integer soldAfter = jdbcTemplate.queryForObject(
@@ -283,7 +271,124 @@ class RefundIntegrationTest {
         assertThat(available).isEqualTo(12);
     }
 
+    // ---- H3: 退款按 order_passenger.seat_id 快照释放,不按 orderId 全量 ----
+
+    @Test
+    void refund_releasesOnlySnapshotSeats_keepsStaleOrderIdSoldUntouched() throws Exception {
+        Long flightId = createFlight(LocalDateTime.now().plusDays(3));
+        Long orderId = createAndPayOrder(flightId);
+
+        // 当前订单关联的快照座位(order_passenger.seat_id)
+        Long snapshotSeatId = jdbcTemplate.queryForObject(
+                "SELECT seat_id FROM order_passenger WHERE order_id = ?", Long.class, orderId);
+
+        // 造脏数据:同航班另一 AVAILABLE 座位被标为 SOLD 且 locked_by_order_id 指向本订单,
+        // 模拟 "orderId 名下残留非快照 SOLD"(异常/并发/历史数据)。它不属于 order_passenger 快照。
+        Long staleSeatId = jdbcTemplate.queryForObject(
+                "SELECT id FROM flight_seat WHERE flight_id = ? AND status = 'AVAILABLE' LIMIT 1",
+                Long.class, flightId);
+        jdbcTemplate.update(
+                "UPDATE flight_seat SET status = 'SOLD', locked_by_order_id = ?, version = version + 1 WHERE id = ?",
+                orderId, staleSeatId);
+
+        mockMvc.perform(refund(orderId, userToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.status").value("SUCCESS"));
+
+        // 快照座位应被释放
+        var snapshotSeat = jdbcTemplate.queryForMap(
+                "SELECT status, locked_by_order_id FROM flight_seat WHERE id = ?", snapshotSeatId);
+        assertThat(snapshotSeat.get("status")).isEqualTo("AVAILABLE");
+        assertThat(snapshotSeat.get("locked_by_order_id")).isNull();
+
+        // 脏数据座位必须保持 SOLD —— 按 orderId 全量释放会误放它(H3 病灶)
+        var staleSeat = jdbcTemplate.queryForMap(
+                "SELECT status, locked_by_order_id FROM flight_seat WHERE id = ?", staleSeatId);
+        assertThat(staleSeat.get("status")).isEqualTo("SOLD");
+        assertThat(staleSeat.get("locked_by_order_id")).isEqualTo(orderId);
+
+        // 余票按 passengerCount(=1) 回补,而非按 orderId 名下 SOLD 数(=2)
+        Integer remaining = jdbcTemplate.queryForObject(
+                "SELECT remaining_seats FROM flight WHERE id = ?", Integer.class, flightId);
+        assertThat(remaining).isEqualTo(12);
+    }
+
+    // ---- H3: cabinClasses 同样基于快照,脏 SOLD 的舱位不触发候补兑现 ----
+
+    @Test
+    void refund_cabinClassesFromSnapshot_excludesStaleSoldCabin() throws Exception {
+        Long flightId = createFlight(LocalDateTime.now().plusDays(3));
+        Long orderId = createAndPayOrder(flightId);
+
+        Long snapshotSeatId = jdbcTemplate.queryForObject(
+                "SELECT seat_id FROM order_passenger WHERE order_id = ?", Long.class, orderId);
+
+        // 造脏数据:同航班另一 AVAILABLE 座位改为 BUSINESS + SOLD + locked_by_order_id=orderId
+        // (BUSINESS 与快照座位的 ECONOMY 不同 cabin)
+        Long staleSeatId = jdbcTemplate.queryForObject(
+                "SELECT id FROM flight_seat WHERE flight_id = ? AND status = 'AVAILABLE' LIMIT 1",
+                Long.class, flightId);
+        jdbcTemplate.update(
+                "UPDATE flight_seat SET cabin_class='BUSINESS', status='SOLD', locked_by_order_id=?, version=version+1 WHERE id=?",
+                orderId, staleSeatId);
+
+        // BUSINESS cabin 现仅 1 个 SOLD 脏座位(AVAILABLE=0),满足候补创建条件
+        Long businessPaxId = createPassenger("BusinessCabinPax");
+        Long businessWlId = createWaitlist(flightId, "BUSINESS", businessPaxId);
+
+        mockMvc.perform(refund(orderId, userToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.status").value("SUCCESS"));
+
+        // 快照 ECONOMY 座位释放;脏 BUSINESS 座位保持 SOLD
+        assertThat(seatStatus(snapshotSeatId)).isEqualTo("AVAILABLE");
+        assertThat(seatStatus(staleSeatId)).isEqualTo("SOLD");
+
+        // H3 关键:cabinClasses 只含快照座位 cabin(ECONOMY),不含脏座位 cabin(BUSINESS),
+        // 故 BUSINESS 候补不应被退款候补兑现触及 —— status 仍 WAITING 且无 skip_reason。
+        // 旧代码(按 orderId 全量查 cabin)会把 BUSINESS 纳入并尝试兑现,因 BUSINESS 无 AVAILABLE
+        // 座位而写 last_skip_reason("可用座位不足"),此处可区分新旧实现。
+        Map<String, Object> wl = jdbcTemplate.queryForMap(
+                "SELECT status, last_skip_reason FROM waitlist_order WHERE id = ?", businessWlId);
+        assertThat(wl.get("status")).isEqualTo("WAITING");
+        assertThat(wl.get("last_skip_reason")).isNull();
+    }
+
+    // ---- Reason validation ----
+
+    @Test
+    void refund_rejectsMissingReason() throws Exception {
+        Long flightId = createFlight(LocalDateTime.now().plusDays(3));
+        Long orderId = createAndPayOrder(flightId);
+
+        mockMvc.perform(post("/api/orders/" + orderId + "/refund")
+                        .header("Authorization", "Bearer " + userToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void refund_persistsReason() throws Exception {
+        Long flightId = createFlight(LocalDateTime.now().plusDays(3));
+        Long orderId = createAndPayOrder(flightId);
+
+        mockMvc.perform(refund(orderId, userToken))
+                .andExpect(status().isOk());
+
+        String reason = jdbcTemplate.queryForObject(
+                "SELECT reason FROM refund_record WHERE order_id = ?", String.class, orderId);
+        assertThat(reason).isEqualTo("行程变更");
+    }
+
     // ---- Helpers ----
+
+    private MockHttpServletRequestBuilder refund(Long orderId, String token) {
+        return post("/api/orders/" + orderId + "/refund")
+                .header("Authorization", "Bearer " + token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"reason\":\"行程变更\"}");
+    }
 
     private String loginAsUser() throws Exception {
         MvcResult result = mockMvc.perform(post("/api/auth/login")
@@ -298,7 +403,7 @@ class RefundIntegrationTest {
     private String loginAsAdmin() throws Exception {
         MvcResult result = mockMvc.perform(post("/api/admin/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"username\":\"admin\",\"password\":\"Admin@123456\"}"))
+                        .content("{\"username\":\"admin\",\"password\":\"SkyBooker@Init2026!\"}"))
                 .andExpect(status().isOk())
                 .andReturn();
         return objectMapper.readTree(result.getResponse().getContentAsString())
@@ -384,5 +489,41 @@ class RefundIntegrationTest {
                         "VALUES(?, ?, ?, ?, 500, 50, 30, 0, 580)",
                 "TEST" + System.currentTimeMillis(), userId, flightId, status);
         return jdbcTemplate.queryForObject("SELECT LAST_INSERT_ID()", Long.class);
+    }
+
+    private String seatStatus(Long seatId) {
+        return jdbcTemplate.queryForObject(
+                "SELECT status FROM flight_seat WHERE id = ?", String.class, seatId);
+    }
+
+    private Long createPassenger(String name) throws Exception {
+        String idCard = "310101" + String.format("%012d",
+                Math.floorMod(System.nanoTime(), 1_000_000_000_000L));
+        MvcResult result = mockMvc.perform(post("/api/passengers")
+                        .header("Authorization", "Bearer " + userToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"" + name + "\",\"idCardNo\":\"" + idCard
+                                + "\",\"passengerType\":\"ADULT\",\"phone\":\"13900001111\"}"))
+                .andExpect(status().isOk())
+                .andReturn();
+        return objectMapper.readTree(result.getResponse().getContentAsString())
+                .get("data").get("id").asLong();
+    }
+
+    private Long createWaitlist(Long flightId, String cabinClass, Long passengerId) throws Exception {
+        MvcResult result = mockMvc.perform(post("/api/waitlist")
+                        .header("Authorization", "Bearer " + userToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"flightId\":" + flightId
+                                + ",\"cabinClass\":\"" + cabinClass + "\""
+                                + ",\"passengerIds\":[" + passengerId + "]}"))
+                .andExpect(status().isOk())
+                .andReturn();
+        Long wlId = objectMapper.readTree(result.getResponse().getContentAsString())
+                .get("data").get("id").asLong();
+        mockMvc.perform(post("/api/waitlist/" + wlId + "/pay")
+                        .header("Authorization", "Bearer " + userToken))
+                .andExpect(status().isOk());
+        return wlId;
     }
 }

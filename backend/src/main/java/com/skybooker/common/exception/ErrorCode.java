@@ -16,7 +16,8 @@ public enum ErrorCode {
     INVALID_CREDENTIALS(10007, "邮箱或密码错误"),
     ACCOUNT_DISABLED(10008, "账号已被禁用"),
     ACCOUNT_TYPE_MISMATCH(10012, "账号类型不允许登录当前入口"),
-    TOKEN_INVALID(10001, "Token 无效"),
+    TOKEN_INVALID(10018, "Token 无效"),
+    REFRESH_TOKEN_INVALID(10021, "刷新令牌无效或已过期"),
     TOKEN_EXPIRED(10011, "Token 已失效"),
     VERIFICATION_CODE_INVALID(10004, "验证码无效或已过期"),
     VERIFICATION_CODE_SEND_TOO_FREQUENT(10005, "验证码发送过于频繁"),
@@ -28,7 +29,7 @@ public enum ErrorCode {
     VALIDATION_ERROR(10003, "参数校验失败"),
 
     // Admin
-    ADMIN_PROFILE_DISABLED(10008, "管理员账号已被禁用"),
+    ADMIN_PROFILE_DISABLED(10019, "管理员账号已被禁用"),
 
     // Business
     RESOURCE_NOT_FOUND(20001, "资源不存在"),
@@ -45,13 +46,18 @@ public enum ErrorCode {
     IP_CODE_LIMIT_EXCEEDED(10013, "IP验证码请求次数已达上限"),
     VERIFICATION_CODE_MAX_ATTEMPTS(10014, "验证码错误次数过多，请重新获取"),
     SCENE_NOT_SUPPORTED(10015, "不支持的场景类型"),
+    VERIFICATION_EMAIL_SEND_FAILED(10016, "验证码邮件发送失败，请稍后重试"),
+    LOGIN_RATE_LIMITED(10017, "登录失败次数过多，请稍后再试"),
+    AI_RATE_LIMITED(10020, "请求过于频繁，请稍后再试"),
     FLIGHT_HAS_INVENTORY(40008, "航班已有座位或订单，不允许修改"),
     ADMIN_ACCOUNT_PROTECTED(40009, "不允许操作管理员账号"),
     REFUND_WINDOW_CLOSED(50001, "退款窗口已关闭，距起飞不足2小时"),
     WAITLIST_NOT_FOUND(50002, "候补订单不存在"),
     WAITLIST_STATE_INVALID(50003, "候补订单状态不允许此操作"),
     WAITLIST_NOT_NEEDED(50004, "当前舱位余票充足，无需候补"),
-    DUPLICATE_WAITLIST_PASSENGER(50005, "候补订单中存在重复乘机人");
+    DUPLICATE_WAITLIST_PASSENGER(50005, "候补订单中存在重复乘机人"),
+    CHANGE_WINDOW_CLOSED(50006, "改签窗口已关闭，距起飞不足2小时"),
+    AI_LLM_CONFIG_INVALID(10022, "LLM 配置校验失败");
 
     private final int code;
     private final String message;

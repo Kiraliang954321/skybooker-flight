@@ -47,14 +47,19 @@ public class SecurityConfig {
                             .requestMatchers("/api/auth/email-code").permitAll()
                             .requestMatchers("/api/auth/register").permitAll()
                             .requestMatchers("/api/auth/reset-password").permitAll()
+                            .requestMatchers("/api/auth/refresh").permitAll()
+                            .requestMatchers("/api/auth/logout").permitAll()
                             .requestMatchers("/api/admin/auth/login").permitAll()
+                            .requestMatchers("/api/admin/auth/refresh").permitAll()
+                            .requestMatchers("/api/admin/logout").permitAll()
                             .requestMatchers("/api/flights/**").permitAll()
                             .requestMatchers("/api/ai/**").access(
                                     (authSupplier, ctx) -> checkAiAccess(authSupplier))
                             .requestMatchers("/api/orders/**", "/api/passengers/**", "/api/waitlist/**")
                             .access((authSupplier, ctx) -> requireUserPortal(authSupplier))
-                            .requestMatchers("/api/auth/me", "/api/auth/logout")
+                            .requestMatchers("/api/auth/me")
                             .access((authSupplier, ctx) -> requireUserPortal(authSupplier))
+                            // /api/admin/** 通配收敛为 ADMIN portal，含 /api/admin/ai/llm-config（GET/PUT LLM 运行时配置）
                             .requestMatchers("/api/admin/**")
                             .access((authSupplier, ctx) -> requireAdminPortal(authSupplier));
 

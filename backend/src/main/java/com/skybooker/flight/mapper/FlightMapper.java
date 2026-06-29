@@ -110,7 +110,7 @@ public interface FlightMapper {
 
     int updateSeatStatusToSold(@Param("orderId") Long orderId);
 
-    void releaseSeatsByOrderId(@Param("orderId") Long orderId);
+    int releaseSeatsByOrderId(@Param("orderId") Long orderId);
 
     int countSeatsByFlightId(@Param("flightId") Long flightId);
 
@@ -131,15 +131,13 @@ public interface FlightMapper {
                                                          @Param("cabinClass") String cabinClass,
                                                          @Param("limit") int limit);
 
-    int releaseSoldSeatsByOrderId(@Param("orderId") Long orderId);
-
     int lockAvailableSeatsForWaitlist(@Param("seatIds") List<Long> seatIds,
                                       @Param("orderId") Long orderId);
 
     java.math.BigDecimal findMinPriceByFlightAndCabin(@Param("flightId") Long flightId,
                                                        @Param("cabinClass") String cabinClass);
 
-    List<String> findCabinClassesByOrderId(@Param("orderId") Long orderId);
+    List<String> findCabinClassesBySeatIds(@Param("seatIds") List<Long> seatIds);
 
     Long findAirlineIdByCodeOrName(@Param("code") String code, @Param("name") String name);
 

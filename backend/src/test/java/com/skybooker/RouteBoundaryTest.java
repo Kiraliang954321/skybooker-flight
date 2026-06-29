@@ -5,6 +5,7 @@ import com.skybooker.admin.dto.AdminLoginDTO;
 import com.skybooker.auth.dto.UserLoginDTO;
 import com.skybooker.common.AbstractIntegrationTest;
 import com.skybooker.common.response.ApiResponse;
+import com.skybooker.common.security.RefreshTokenStore;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -31,6 +32,9 @@ class RouteBoundaryTest extends AbstractIntegrationTest {
 
     @Autowired
     private JdbcTemplate jdbcTemplate;
+
+    @Autowired
+    private RefreshTokenStore refreshTokenStore;
 
     private String userToken;
     private String adminToken;
@@ -77,32 +81,18 @@ class RouteBoundaryTest extends AbstractIntegrationTest {
         assertNotEquals(403, status, "Flight routes should not require authorization");
     }
 
+    // logout 改为 permitAll：不校验 access token 的 portal，仅凭 body 中的 refresh token 作废。
+    // refresh 作废 + 旋转的端到端行为见 AuthRefreshIntegrationTest / AdminRefreshIntegrationTest。
     @Test
-    void userLogout_acceptsUserToken() throws Exception {
-        mockMvc.perform(post("/api/auth/logout")
-                        .header("Authorization", "Bearer " + userToken))
+    void userLogout_accessibleWithoutAccessToken() throws Exception {
+        mockMvc.perform(post("/api/auth/logout"))
                 .andExpect(status().isOk());
     }
 
     @Test
-    void userLogout_rejectsAdminToken() throws Exception {
-        mockMvc.perform(post("/api/auth/logout")
-                        .header("Authorization", "Bearer " + adminToken))
-                .andExpect(status().isForbidden());
-    }
-
-    @Test
-    void adminLogout_acceptsAdminToken() throws Exception {
-        mockMvc.perform(post("/api/admin/logout")
-                        .header("Authorization", "Bearer " + adminToken))
+    void adminLogout_accessibleWithoutAccessToken() throws Exception {
+        mockMvc.perform(post("/api/admin/logout"))
                 .andExpect(status().isOk());
-    }
-
-    @Test
-    void adminLogout_rejectsUserToken() throws Exception {
-        mockMvc.perform(post("/api/admin/logout")
-                        .header("Authorization", "Bearer " + userToken))
-                .andExpect(status().isForbidden());
     }
 
     @Test
@@ -206,8 +196,20 @@ class RouteBoundaryTest extends AbstractIntegrationTest {
                             .header("Authorization", "Bearer " + userToken))
                     .andExpect(status().isUnauthorized());
         } finally {
-            jdbcTemplate.update("UPDATE users SET status = 'ACTIVE' WHERE email = ?", "user1@example.com");
+            jdbcTemplate.update("UPDATE users SET status = 'NORMAL' WHERE email = ?", "user1@example.com");
         }
+    }
+
+    @Test
+    void issuedUserToken_rejectedAfterTokenVersionBumped() throws Exception {
+        // 改密码/全设备登出递增版本号后，旧 access token 也立即失效（Filter 校验 tokenVer）
+        Long userId = jdbcTemplate.queryForObject(
+                "SELECT id FROM users WHERE email = 'user1@example.com'", Long.class);
+        refreshTokenStore.revokeAllByUser("USER", userId);
+
+        mockMvc.perform(get("/api/auth/me")
+                        .header("Authorization", "Bearer " + userToken))
+                .andExpect(status().isUnauthorized());
     }
 
     @Test
@@ -219,7 +221,7 @@ class RouteBoundaryTest extends AbstractIntegrationTest {
                             .header("Authorization", "Bearer " + adminToken))
                     .andExpect(status().isUnauthorized());
         } finally {
-            jdbcTemplate.update("UPDATE admin_user SET status = 'ACTIVE' WHERE username = ?", "admin");
+            jdbcTemplate.update("UPDATE admin_user SET status = 'ENABLED' WHERE username = ?", "admin");
         }
     }
 
@@ -245,7 +247,7 @@ class RouteBoundaryTest extends AbstractIntegrationTest {
     private String obtainAdminToken() throws Exception {
         AdminLoginDTO dto = new AdminLoginDTO();
         dto.setUsername("admin");
-        dto.setPassword("Admin@123456");
+        dto.setPassword("SkyBooker@Init2026!");
 
         MvcResult result = mockMvc.perform(post("/api/admin/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)

@@ -78,7 +78,8 @@ MYSQL_PASSWORD=replace-with-local-password
 REDIS_HOST=localhost
 REDIS_PORT=6379
 JWT_SECRET=replace-with-a-random-secret-at-least-256-bits-long
-JWT_EXPIRATION=86400000
+JWT_ACCESS_MS=3600000
+JWT_REFRESH_MS=1209600000
 OPENAPI_ENABLED=false
 AI_LLM_ENABLED=false
 AI_LLM_BASE_URL=https://api.openai.com/v1
@@ -86,6 +87,8 @@ AI_LLM_API_KEY=replace-with-llm-provider-key
 AI_LLM_MODEL=gpt-4o-mini
 AI_LLM_TIMEOUT_MS=8000
 AI_LLM_MAX_RETRIES=1
+# 后台管理 LLM apiKey 的 AES-256 加密密钥（base64 32 字节，openssl rand -base64 32）。缺失则后台无法写入配置。
+AI_CONFIG_ENC_KEY=
 BACKEND_PORT=8080
 NGINX_PORT=8088
 ```
@@ -93,6 +96,11 @@ NGINX_PORT=8088
 `MYSQL_PASSWORD` 和 `JWT_SECRET` 没有应用内默认值，部署环境必须显式提供。Swagger / Knife4j 文档默认关闭，需要在开发或测试环境将 `OPENAPI_ENABLED=true` 后才开放。
 
 AI 助手默认使用规则解析，不需要 LLM 密钥。启用 LLM 意图解析时，将 `AI_LLM_ENABLED=true`，并配置兼容 OpenAI Chat Completions 的 `AI_LLM_BASE_URL`、`AI_LLM_API_KEY` 和 `AI_LLM_MODEL`。旧变量名 `AI_API_KEY` 不再使用，避免和 LLM 专用配置混淆。`AI_LLM_API_KEY` 只能写在本地 `.env` 或服务器环境变量中，不得提交真实值。
+
+上述环境变量是 **fallback 默认值**：管理员还可通过 `GET / PUT /api/admin/ai/llm-config`（仅 ADMIN portal）在运行时查看（脱敏）和修改 provider 配置，数据库 `ai_llm_config` 记录优先于环境变量，写入后下一个 AI 请求即生效，无需重启。后台写入的 apiKey 加密入库需要独立的 `AI_CONFIG_ENC_KEY`（base64 编码 32 字节，`openssl rand -base64 32` 生成）：
+
+- 该密钥缺失或格式非法时，应用仍可正常启动并走环境变量 fallback；仅当管理员尝试写入后台配置时返回 `AI_LLM_CONFIG_INVALID(10022)`，不落库。
+- **务必妥善备份**：丢失 `AI_CONFIG_ENC_KEY` 后已加密入库的 apiKey 无法解密，系统会自动 fallback 环境变量默认值。该密钥不复用 `JWT_SECRET`，职责隔离。
 
 ## 4. Docker Compose 部署
 
@@ -128,6 +136,7 @@ AI_LLM_API_KEY=replace-with-llm-provider-key
 AI_LLM_MODEL=gpt-4o-mini
 AI_LLM_TIMEOUT_MS=8000
 AI_LLM_MAX_RETRIES=1
+AI_CONFIG_ENC_KEY=
 ```
 
 `docker-compose.yml` 不再为 MySQL 密码和 JWT 密钥提供 `123456` 这类明文默认值。缺少 `MYSQL_PASSWORD` 或 `JWT_SECRET` 时，Compose 会直接报错，避免误用不安全配置。
@@ -242,7 +251,7 @@ server {
 ```text
 后台入口：/admin
 管理员用户名：admin
-管理员密码：Admin@123456
+管理员密码：SkyBooker@Init2026!
 ```
 
 ## 8. 常见问题
@@ -285,59 +294,56 @@ http://localhost:3000
 
 ## 邮件服务配置
 
-当前版本尚未接入 SMTP 发送实现，注册和找回密码验证码由 `LogMailService` 输出到后端日志。以下 SMTP 配置为后续生产邮件能力预留。
+后端通过 `MailService` 抽象发送注册和找回密码验证码。默认 `MAIL_PROVIDER=log`，验证码输出到后端日志，适合本地开发、演示和自动化测试；生产环境可显式切换到 Resend HTTP API。
 
-### 后端环境变量（预留）
+### 后端环境变量
 
 ```env
-# MAIL_ENABLED=true
-# MAIL_PROVIDER=smtp
-# MAIL_HOST=smtp.example.com
-# MAIL_PORT=587
-# MAIL_USERNAME=your-email@example.com
-# MAIL_PASSWORD=<your-email-auth-code>
-# MAIL_FROM=SkyBooker <your-email@example.com>
+MAIL_PROVIDER=log
+MAIL_FROM=SkyBooker <noreply@your-domain.com>
+RESEND_API_KEY=<your-resend-api-key>
+RESEND_BASE_URL=https://api.resend.com
 ```
 
-### Spring Mail 配置示例
+`MAIL_PROVIDER=log` 或未设置时不需要 `RESEND_API_KEY`。启用真实邮件发送时设置：
+
+```env
+MAIL_PROVIDER=resend
+MAIL_FROM=SkyBooker <noreply@your-domain.com>
+RESEND_API_KEY=<your-resend-api-key>
+RESEND_BASE_URL=https://api.resend.com
+```
+
+Resend 要求 API key 可用，并且 `MAIL_FROM` 使用已验证发送域名或已获批准的发件地址。`MAIL_PROVIDER=resend` 时，如果 `MAIL_FROM` 或 `RESEND_API_KEY` 为空，后端会在启动创建邮件 bean 时清晰失败，不会静默回退到日志模式。
+
+### Docker Compose 变量传递
+
+`docker-compose.yml` 将邮件变量透传给 backend，并保持本地默认可启动：
 
 ```yaml
-spring:
-  mail:
-    host: ${MAIL_HOST:smtp.example.com}
-    port: ${MAIL_PORT:587}
-    username: ${MAIL_USERNAME:}
-    password: ${MAIL_PASSWORD:}
-    properties:
-      mail:
-        smtp:
-          auth: true
-          starttls:
-            enable: true
+MAIL_PROVIDER: ${MAIL_PROVIDER:-log}
+MAIL_FROM: ${MAIL_FROM:-}
+RESEND_API_KEY: ${RESEND_API_KEY:-}
+RESEND_BASE_URL: ${RESEND_BASE_URL:-https://api.resend.com}
 ```
 
-### 开发环境日志输出（当前默认行为）
+注意不要使用 `${RESEND_API_KEY:?...}` 这类强制校验形式。凭据校验由后端在 `MAIL_PROVIDER=resend` 时完成，默认 log 模式不应阻止 `docker compose up`。
 
-当前版本默认使用 `LogMailService`，验证码直接输出到后端日志，不需要邮件服务账号。以下变量为未来 SMTP 接入预留，当前不生效：
+### 日志模式和回滚
 
-```env
-# MAIL_ENABLED=false
-# MAIL_PROVIDER=mock
-```
-
-部署环境中查看验证码：
+日志模式下查看验证码：
 
 ```bash
 docker compose logs -f backend | grep -i "verification\|验证码"
 ```
 
-### 推荐邮件服务
+从 Resend 回滚到日志模式时，将 `.env` 中 `MAIL_PROVIDER` 改为 `log` 或删除该变量，然后重启后端：
 
-- 个人邮箱 SMTP：适合本地演示；
-- Brevo：适合免费事务邮件发送；
-- Resend：适合开发者 API 邮件发送。
+```bash
+docker compose up -d backend
+```
 
-短信验证码、微信登录、支付宝登录不作为默认部署依赖。
+短信验证码、微信登录、支付宝登录不作为默认部署依赖。SMTP、Brevo 和托管邮件模板可作为后续扩展。
 
 ## 9. 服务器部署
 
@@ -512,7 +518,7 @@ SKYBOOKER_BASE_URL=http://localhost:8088 scripts/smoke/backend-smoke.sh
 
 ```text
 管理员用户名：admin
-默认密码：Admin@123456
+默认密码：SkyBooker@Init2026!
 ```
 
 修改密码后，后续 smoke 验证必须显式传入新密码：
@@ -601,15 +607,11 @@ AI_LLM_MODEL=gpt-4o-mini
 AI_LLM_TIMEOUT_MS=8000
 AI_LLM_MAX_RETRIES=1
 
-# === 邮件服务（当前预留，SMTP 实现接入后启用） ===
-# 当前后端使用 LogMailService 输出验证码到日志，以下变量暂不生效。
-# MAIL_ENABLED=true
-# MAIL_PROVIDER=smtp
-# MAIL_HOST=smtp.example.com
-# MAIL_PORT=587
-# MAIL_USERNAME=your-email@example.com
-# MAIL_PASSWORD=<your-email-auth-code>
-# MAIL_FROM=SkyBooker <your-email@example.com>
+# === 邮件服务 ===
+MAIL_PROVIDER=log
+MAIL_FROM=SkyBooker <noreply@your-domain.com>
+RESEND_API_KEY=<your-resend-api-key>
+RESEND_BASE_URL=https://api.resend.com
 
 # === Redis（Compose 内部通常不需要修改） ===
 REDIS_HOST=redis
@@ -635,7 +637,7 @@ BACKEND_PORT=127.0.0.1:8080
 
 - [ ] `JWT_SECRET` 已替换为足够长的随机密钥（至少 256 位，使用 `openssl rand -base64 48` 生成）；
 - [ ] `MYSQL_PASSWORD` 已替换为强密码，不使用 `123456` 或默认值；
-- [ ] 默认管理员密码 `Admin@123456` 已通过管理后台修改；
+- [ ] 默认管理员密码 `SkyBooker@Init2026!` 已通过管理后台修改；
 - [ ] `OPENAPI_ENABLED=false`（Swagger/Knife4j 不对外暴露）；
 - [ ] 对外只开放必要端口（80/443 或 8088）；
 - [ ] MySQL（3306）、Redis（6379）、后端（8080）端口绑定到 `127.0.0.1`（Compose 默认行为）；
@@ -779,7 +781,7 @@ SKYBOOKER_BASE_URL=http://skybooker.example.com scripts/smoke/backend-smoke.sh
 SKYBOOKER_BASE_URL=https://skybooker.example.com scripts/smoke/backend-smoke.sh
 ```
 
-首次部署时使用默认管理员密码（`Admin@123456`），smoke 可直接运行。修改管理员密码后，必须显式传入新密码：
+首次部署时使用默认管理员密码（`SkyBooker@Init2026!`），smoke 可直接运行。修改管理员密码后，必须显式传入新密码：
 
 ```bash
 SKYBOOKER_ADMIN_PASSWORD='<new-admin-password>' \
