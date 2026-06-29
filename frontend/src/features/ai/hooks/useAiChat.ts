@@ -78,8 +78,8 @@ export function useAiChat() {
     if (!sessionId) return
     setIsLoading(true)
     try {
-      const msgs = await aiApi.getMessages(sessionId)
-      const chatMsgs: ChatMessage[] = msgs.map((m) => ({
+      const data = await aiApi.getMessages(sessionId)
+      const chatMsgs: ChatMessage[] = data.messages.map((m) => ({
         id: String(m.id),
         role: m.role === "USER" ? "user" : "assistant",
         content: m.content,

@@ -49,10 +49,18 @@ export function useFlightSearch(): UseFlightSearchReturn {
       if (minPrice) params.minPrice = Number(minPrice)
       if (maxPrice) params.maxPrice = Number(maxPrice)
       if (directOnly === "true") params.directOnly = true
-      if (departureTimeRange) params.departureTimeRange = departureTimeRange
-      if (sortBy) params.sortBy = sortBy
-      if (sortOrder) params.sortOrder = sortOrder
-      if (airlineCode) params.airlineCode = airlineCode
+      if (departureTimeRange) {
+        const parts = departureTimeRange.split("-")
+        if (parts.length === 2) {
+          params.departureTimeStart = parts[0]
+          params.departureTimeEnd = parts[1]
+        }
+      }
+      if (sortBy) {
+        const order = sortOrder || "asc"
+        params.sort = `${sortBy}_${order}`
+      }
+      if (airlineCode) params.airlineId = Number(airlineCode)
       params.page = page
       params.size = size
 

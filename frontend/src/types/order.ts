@@ -46,11 +46,16 @@ export interface OrderVO {
   airlineName?: string
 }
 
+/** 创建订单项 */
+export interface OrderItemDTO {
+  passengerId: number
+  seatId: number
+}
+
 /** 创建订单 DTO */
 export interface CreateOrderDTO {
   flightId: number
-  passengerIds: number[]
-  seatIds: number[]
+  items: OrderItemDTO[]
 }
 
 /** 改签可选航班 */
@@ -66,8 +71,14 @@ export interface ChangeOptionVO {
   priceDiff: number
 }
 
+/** 改签座位映射 */
+export interface SeatMapping {
+  passengerId: number
+  newSeatId: number
+}
+
 /** 改签 DTO */
 export interface ChangeOrderDTO {
   newFlightId: number
-  newSeatIds: number[]
+  seatMappings: SeatMapping[]
 }

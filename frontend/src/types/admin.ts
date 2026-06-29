@@ -18,7 +18,10 @@ export interface DashboardSummaryVO {
 export interface HotRouteVO {
   departureCity: string
   arrivalCity: string
-  orderCount: number
+  routeLabel: string
+  issuedOrderCount: number
+  passengerCount: number
+  revenue: number
 }
 
 /** 订单状态分布 */
@@ -40,12 +43,12 @@ export interface UserAdminVO {
 /** 航班表单 DTO（管理端） */
 export interface FlightFormDTO {
   flightNo: string
-  airlineCode: string
-  airlineName: string
-  departureAirportCode: string
-  arrivalAirportCode: string
+  airlineId: number
+  departureAirportId: number
+  arrivalAirportId: number
   departureTime: string
   arrivalTime: string
+  durationMinutes: number
   basePrice: number
   totalSeats: number
   baggageAllowance: string

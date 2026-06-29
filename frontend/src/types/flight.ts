@@ -40,13 +40,13 @@ export interface FlightSearchParams {
   departureCity?: string
   arrivalCity?: string
   departureDate?: string
-  airlineCode?: string
+  airlineId?: number
   minPrice?: number
   maxPrice?: number
   directOnly?: boolean
-  departureTimeRange?: string // "06:00-12:00"
-  sortBy?: "price" | "duration" | "departure" | "seats"
-  sortOrder?: "asc" | "desc"
+  departureTimeStart?: string // "HH:mm"
+  departureTimeEnd?: string   // "HH:mm"
+  sort?: string
   page?: number
   size?: number
 }

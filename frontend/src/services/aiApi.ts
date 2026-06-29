@@ -1,5 +1,5 @@
 import { get, post, del } from "@/lib/request"
-import type { AiChatReplyVO, AiSessionMessageVO } from "@/types/ai"
+import type { AiChatReplyVO, AiSessionMessagesVO } from "@/types/ai"
 
 /** 发送 AI 聊天消息 */
 export function chat(data: { sessionId?: string; message: string }) {
@@ -8,7 +8,7 @@ export function chat(data: { sessionId?: string; message: string }) {
 
 /** 获取会话历史消息 */
 export function getMessages(sessionId: string) {
-  return get<AiSessionMessageVO[]>(`/ai/sessions/${sessionId}/messages`, undefined, { auth: "user" })
+  return get<AiSessionMessagesVO>(`/ai/sessions/${sessionId}/messages`, undefined, { auth: "user" })
 }
 
 /** 删除会话 */

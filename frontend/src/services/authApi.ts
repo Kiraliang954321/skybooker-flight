@@ -18,7 +18,7 @@ export function register(data: {
   nickname: string
   password: string
 }) {
-  return post<LoginResponse>("/auth/register", data)
+  return post<null>("/auth/register", data)
 }
 
 /** 重置密码 */

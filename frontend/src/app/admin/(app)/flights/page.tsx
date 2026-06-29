@@ -40,12 +40,12 @@ import type { ApiError } from "@/lib/request"
 
 const flightSchema = z.object({
   flightNo: z.string().min(1, "请输入航班号"),
-  airlineCode: z.string().min(1, "请输入航司代码"),
-  airlineName: z.string().min(1, "请输入航司名称"),
-  departureAirportCode: z.string().min(1, "请输入出发机场代码"),
-  arrivalAirportCode: z.string().min(1, "请输入到达机场代码"),
+  airlineId: z.coerce.number().min(1, "请输入航司ID"),
+  departureAirportId: z.coerce.number().min(1, "请输入出发机场ID"),
+  arrivalAirportId: z.coerce.number().min(1, "请输入到达机场ID"),
   departureTime: z.string().min(1, "请选择出发时间"),
   arrivalTime: z.string().min(1, "请选择到达时间"),
+  durationMinutes: z.coerce.number().min(1, "请输入飞行时长（分钟）"),
   basePrice: z.coerce.number().min(1, "请输入票价"),
   totalSeats: z.coerce.number().min(1, "请输入座位数"),
   baggageAllowance: z.string().min(1, "请输入行李额"),
@@ -103,12 +103,10 @@ export default function AdminFlightsPage() {
     setEditingFlight(f)
     setActionErr(null)
     setValue("flightNo", f.flightNo)
-    setValue("airlineCode", f.airlineCode)
-    setValue("airlineName", f.airlineName)
-    setValue("departureAirportCode", f.departureAirportCode)
-    setValue("arrivalAirportCode", f.arrivalAirportCode)
+    // FlightVO 不包含 airlineId/airportId，编辑时需要手动填入
     setValue("departureTime", f.departureTime.slice(0, 16))
     setValue("arrivalTime", f.arrivalTime.slice(0, 16))
+    setValue("durationMinutes", f.durationMinutes)
     setValue("basePrice", f.basePrice)
     setValue("totalSeats", f.totalSeats)
     setValue("baggageAllowance", f.baggageAllowance)
@@ -291,29 +289,29 @@ export default function AdminFlightsPage() {
                 {errors.flightNo && <p className="text-xs text-destructive">{errors.flightNo.message}</p>}
               </div>
               <div className="space-y-1.5">
-                <Label>航司代码</Label>
-                <Input {...register("airlineCode")} placeholder="CA" />
-                {errors.airlineCode && <p className="text-xs text-destructive">{errors.airlineCode.message}</p>}
+                <Label>航司ID</Label>
+                <Input type="number" {...register("airlineId")} placeholder="1" />
+                {errors.airlineId && <p className="text-xs text-destructive">{errors.airlineId.message}</p>}
               </div>
               <div className="space-y-1.5">
-                <Label>航司名称</Label>
-                <Input {...register("airlineName")} placeholder="中国国际航空" />
-                {errors.airlineName && <p className="text-xs text-destructive">{errors.airlineName.message}</p>}
+                <Label>出发机场ID</Label>
+                <Input type="number" {...register("departureAirportId")} placeholder="1" />
+                {errors.departureAirportId && <p className="text-xs text-destructive">{errors.departureAirportId.message}</p>}
+              </div>
+              <div className="space-y-1.5">
+                <Label>到达机场ID</Label>
+                <Input type="number" {...register("arrivalAirportId")} placeholder="2" />
+                {errors.arrivalAirportId && <p className="text-xs text-destructive">{errors.arrivalAirportId.message}</p>}
+              </div>
+              <div className="space-y-1.5">
+                <Label>飞行时长（分钟）</Label>
+                <Input type="number" {...register("durationMinutes")} placeholder="180" />
+                {errors.durationMinutes && <p className="text-xs text-destructive">{errors.durationMinutes.message}</p>}
               </div>
               <div className="space-y-1.5">
                 <Label>行李额</Label>
                 <Input {...register("baggageAllowance")} placeholder="20kg" />
                 {errors.baggageAllowance && <p className="text-xs text-destructive">{errors.baggageAllowance.message}</p>}
-              </div>
-              <div className="space-y-1.5">
-                <Label>出发机场代码</Label>
-                <Input {...register("departureAirportCode")} placeholder="PVG" />
-                {errors.departureAirportCode && <p className="text-xs text-destructive">{errors.departureAirportCode.message}</p>}
-              </div>
-              <div className="space-y-1.5">
-                <Label>到达机场代码</Label>
-                <Input {...register("arrivalAirportCode")} placeholder="PEK" />
-                {errors.arrivalAirportCode && <p className="text-xs text-destructive">{errors.arrivalAirportCode.message}</p>}
               </div>
               <div className="space-y-1.5">
                 <Label>出发时间</Label>

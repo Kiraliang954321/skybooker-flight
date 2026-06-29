@@ -32,5 +32,5 @@ export interface AdminLoginResponse {
   accessToken: string
   tokenType: string
   expiresIn: number
-  user: AdminUser
+  admin: AdminUser
 }

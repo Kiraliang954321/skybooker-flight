@@ -143,7 +143,7 @@ export default function AdminDashboardPage() {
                     return d ? `${d.departureCity} → ${d.arrivalCity}` : ""
                   }}
                 />
-                <Bar dataKey="orderCount" fill="#3b82f6" radius={[0, 4, 4, 0]} />
+                <Bar dataKey="issuedOrderCount" fill="#3b82f6" radius={[0, 4, 4, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </CardContent>

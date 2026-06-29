@@ -150,8 +150,10 @@ export function useBooking(flightId: number) {
     try {
       const order = await orderApi.createOrder({
         flightId,
-        passengerIds: state.selectedPassengerIds,
-        seatIds: state.selectedSeatIds,
+        items: state.selectedPassengerIds.map((pId, i) => ({
+          passengerId: pId,
+          seatId: state.selectedSeatIds[i],
+        })),
       })
       setPartial({ createdOrder: order, isSubmitting: false })
       nextStep()

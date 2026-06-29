@@ -42,7 +42,7 @@ export function useRegister() {
     setError(null)
     try {
       await register(data)
-      router.push("/")
+      router.push("/login")
     } catch (err) {
       if (err instanceof ApiError) {
         setError(err.message)

@@ -51,9 +51,9 @@ export function AdminAuthProvider({ children }: { children: ReactNode }) {
   const login = useCallback(async (username: string, password: string) => {
     const res = await adminApi.adminLogin(username, password)
     setAdminToken(res.accessToken)
-    setAdminData(res.user)
+    setAdminData(res.admin)
     setToken(res.accessToken)
-    setAdmin(res.user)
+    setAdmin(res.admin)
   }, [])
 
   const logout = useCallback(async () => {

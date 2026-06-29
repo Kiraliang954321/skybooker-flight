@@ -35,6 +35,13 @@ export interface AiSessionMessageVO {
   createdAt: string
 }
 
+/** AI 会话消息列表（后端包装对象） */
+export interface AiSessionMessagesVO {
+  sessionId: string
+  status: string
+  messages: AiSessionMessageVO[]
+}
+
 /** 聊天消息（前端本地状态） */
 export interface ChatMessage {
   id: string
