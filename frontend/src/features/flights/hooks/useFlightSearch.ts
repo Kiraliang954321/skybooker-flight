@@ -57,7 +57,7 @@ export function useFlightSearch(): UseFlightSearchReturn {
         const order = sortOrder || "asc"
         params.sort = `${sortBy}_${order}`
       }
-      if (airlineCode) params.airlineId = Number(airlineCode)
+      if (airlineCode) params.airlineCode = airlineCode
       params.page = page
       params.size = size
 

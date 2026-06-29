@@ -117,7 +117,7 @@ export default function AdminUsersPage() {
             <TableHeader>
               <TableRow>
                 <TableHead>ID</TableHead>
-                <TableHead>昵称</TableHead>
+                <TableHead>姓名</TableHead>
                 <TableHead>邮箱</TableHead>
                 <TableHead>状态</TableHead>
                 <TableHead>注册时间</TableHead>
@@ -133,7 +133,7 @@ export default function AdminUsersPage() {
                 users.map((u) => (
                   <TableRow key={u.id}>
                     <TableCell>{u.id}</TableCell>
-                    <TableCell className="font-medium">{u.nickname}</TableCell>
+                    <TableCell className="font-medium">{u.realName}</TableCell>
                     <TableCell>{u.email}</TableCell>
                     <TableCell>
                       {u.status === "ENABLED" ? (
@@ -189,8 +189,8 @@ export default function AdminUsersPage() {
             <DialogTitle>确认操作</DialogTitle>
             <DialogDescription>
               {confirmAction?.action === "disable"
-                ? `确定要禁用用户「${confirmAction?.user.nickname}」吗？`
-                : `确定要启用用户「${confirmAction?.user.nickname}」吗？`}
+                ? `确定要禁用用户「${confirmAction?.user.realName}」吗？`
+                : `确定要启用用户「${confirmAction?.user.realName}」吗？`}
             </DialogDescription>
           </DialogHeader>
           <div className="flex justify-end gap-2 mt-4">

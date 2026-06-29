@@ -7,8 +7,6 @@ import {
   getUserToken,
   setUserToken,
   removeUserToken,
-  getUserRefreshToken,
-  setUserRefreshToken,
   removeUserRefreshToken,
   setUserData,
   removeUserData,
@@ -20,7 +18,7 @@ interface AuthState {
   isLoading: boolean
   isAuthenticated: boolean
   login: (email: string, password: string) => Promise<void>
-  register: (data: { email: string; code: string; nickname: string; password: string }) => Promise<void>
+  register: (data: { email: string; code: string; nickname: string; password: string; confirmPassword: string }) => Promise<void>
   logout: () => Promise<void>
   refreshUser: () => Promise<void>
 }
@@ -58,14 +56,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = useCallback(async (email: string, password: string) => {
     const res = await authApi.login(email, password)
     setUserToken(res.accessToken)
-    setUserRefreshToken(res.refreshToken)
     setUserData(res.user)
     setToken(res.accessToken)
     setUser(res.user)
   }, [])
 
   const register = useCallback(
-    async (data: { email: string; code: string; nickname: string; password: string }) => {
+    async (data: { email: string; code: string; nickname: string; password: string; confirmPassword: string }) => {
       await authApi.register(data)
       // 注册后不自动登录，需跳转到登录页
     },
@@ -74,8 +71,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = useCallback(async () => {
     try {
-      const refreshToken = getUserRefreshToken()
-      await authApi.logout(refreshToken ?? undefined)
+      await authApi.logout()
     } catch {
       // 即使 API 失败也清除本地状态
     }

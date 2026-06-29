@@ -30,14 +30,20 @@ export interface OrderStatusDistributionVO {
   count: number
 }
 
-/** 管理员端的用户 */
+/** 管理员端的用户 — 匹配后端 UserAdminVO */
 export interface UserAdminVO {
   id: number
   email: string
-  nickname: string
+  realName: string
+  phone?: string
+  avatarUrl?: string
   role: "USER" | "ADMIN"
   status: "ENABLED" | "DISABLED"
+  emailVerified: boolean
+  phoneVerified: boolean
+  lastLoginAt?: string
   createdAt: string
+  updatedAt?: string
 }
 
 /** 航班表单 DTO（管理端） */
