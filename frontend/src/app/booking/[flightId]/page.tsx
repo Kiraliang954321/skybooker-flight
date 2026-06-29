@@ -296,7 +296,7 @@ export default function BookingPage() {
                 <Skeleton className="h-32 w-full rounded-xl" />
               ) : booking.myPassengers.length === 0 ? (
                 <p className="text-sm text-muted-foreground text-center py-8">
-                  暂无常用乘机人，请点击"新增乘机人"添加
+                  暂无常用乘机人，请点击&ldquo;新增乘机人&rdquo;添加
                 </p>
               ) : (
                 <div className="space-y-2">

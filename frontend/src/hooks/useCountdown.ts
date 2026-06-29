@@ -14,10 +14,8 @@ export function useCountdown(
   const [running, setRunning] = useState(false)
 
   useEffect(() => {
-    if (!running || count <= 0) {
-      setRunning(false)
-      return
-    }
+    if (!running) return
+
     const timer = setInterval(() => {
       setCount((c) => {
         if (c <= 1) {
@@ -28,7 +26,7 @@ export function useCountdown(
       })
     }, 1000)
     return () => clearInterval(timer)
-  }, [running, count])
+  }, [running])
 
   const start = useCallback(() => {
     setCount(seconds)

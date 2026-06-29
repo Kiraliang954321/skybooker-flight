@@ -47,8 +47,6 @@ export default function AdminOrdersPage() {
   const [detailLoading, setDetailLoading] = useState(false)
 
   const fetchOrders = useCallback(async () => {
-    setIsLoading(true)
-    setError(null)
     try {
       const params: Record<string, string | number | boolean | undefined> = { page, size: 10 }
       if (statusFilter) params.status = statusFilter
@@ -56,6 +54,7 @@ export default function AdminOrdersPage() {
       const data = await adminApi.getAdminOrders(params)
       setOrders(data.records)
       setTotal(data.total)
+      setError(null)
     } catch (err) {
       setError((err as ApiError).message || "加载订单失败")
     } finally {
@@ -95,9 +94,9 @@ export default function AdminOrdersPage() {
           placeholder="搜索订单号..."
           className="w-60"
           value={orderNoFilter}
-          onChange={(e) => { setOrderNoFilter(e.target.value); setPage(1) }}
+          onChange={(e) => { setIsLoading(true); setOrderNoFilter(e.target.value); setPage(1) }}
         />
-        <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v); setPage(1) }}>
+        <Select value={statusFilter} onValueChange={(v) => { if (!v) return; setIsLoading(true); setStatusFilter(v); setPage(1) }}>
           <SelectTrigger className="w-36">
             <SelectValue placeholder="全部状态" />
           </SelectTrigger>
@@ -110,7 +109,7 @@ export default function AdminOrdersPage() {
             <SelectItem value="CANCELLED">已取消</SelectItem>
           </SelectContent>
         </Select>
-        <Button variant="outline" size="sm" onClick={() => { setStatusFilter(""); setOrderNoFilter(""); setPage(1) }}>
+        <Button variant="outline" size="sm" onClick={() => { setIsLoading(true); setStatusFilter(""); setOrderNoFilter(""); setPage(1) }}>
           清除
         </Button>
       </div>
@@ -165,11 +164,11 @@ export default function AdminOrdersPage() {
 
       {totalPages > 1 && (
         <div className="flex items-center justify-center gap-2">
-          <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage(page - 1)}>
+          <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => { setIsLoading(true); setPage(page - 1) }}>
             <ChevronLeft className="h-4 w-4" />
           </Button>
           <span className="text-sm text-muted-foreground">{page} / {totalPages}</span>
-          <Button variant="outline" size="sm" disabled={page >= totalPages} onClick={() => setPage(page + 1)}>
+          <Button variant="outline" size="sm" disabled={page >= totalPages} onClick={() => { setIsLoading(true); setPage(page + 1) }}>
             <ChevronRight className="h-4 w-4" />
           </Button>
         </div>

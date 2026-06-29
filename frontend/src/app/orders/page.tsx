@@ -1,6 +1,7 @@
 "use client"
 
 import { Suspense, useEffect, useState, useCallback } from "react"
+import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
 import { Plane, MapPin, Clock, ChevronLeft, ChevronRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -146,7 +147,7 @@ function OrdersContent() {
           <Card>
             <CardContent className="p-12 text-center">
               <p className="text-muted-foreground mb-4">暂无订单</p>
-              <Button render={<a href="/flights">去预订航班</a>} />
+              <Button render={<Link href="/flights">去预订航班</Link>} />
             </CardContent>
           </Card>
         )}

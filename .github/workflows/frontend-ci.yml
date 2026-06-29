@@ -5,10 +5,16 @@ on:
     branches:
       - dev
       - main
+    paths:
+      - "frontend/**"
+      - ".github/workflows/frontend*.yml"
   push:
     branches:
       - dev
       - main
+    paths:
+      - "frontend/**"
+      - ".github/workflows/frontend*.yml"
 
 jobs:
   lint-build:

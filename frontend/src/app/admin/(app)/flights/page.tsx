@@ -22,7 +22,6 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog"
 import {
   DropdownMenu,
@@ -77,12 +76,11 @@ export default function AdminFlightsPage() {
   })
 
   const fetchFlights = useCallback(async () => {
-    setIsLoading(true)
-    setError(null)
     try {
       const data = await adminApi.getFlights({ page, size: 10 })
       setFlights(data.records)
       setTotal(data.total)
+      setError(null)
     } catch (err) {
       setError((err as ApiError).message || "加载航班失败")
     } finally {
@@ -132,6 +130,7 @@ export default function AdminFlightsPage() {
         await adminApi.createFlight(dto)
       }
       setDialogOpen(false)
+      setIsLoading(true)
       fetchFlights()
     } catch (err) {
       setActionErr((err as ApiError).message || "操作失败")
@@ -147,6 +146,7 @@ export default function AdminFlightsPage() {
       } else {
         await adminApi.publishFlight(f.id)
       }
+      setIsLoading(true)
       fetchFlights()
     } catch (err) {
       setActionErr((err as ApiError).message || "操作失败")
@@ -156,6 +156,7 @@ export default function AdminFlightsPage() {
   const doGenerateSeats = async (id: number) => {
     try {
       await adminApi.generateSeats(id)
+      setIsLoading(true)
       fetchFlights()
     } catch (err) {
       setActionErr((err as ApiError).message || "生成座位失败")
@@ -263,11 +264,11 @@ export default function AdminFlightsPage() {
       {/* 分页 */}
       {totalPages > 1 && (
         <div className="flex items-center justify-center gap-2">
-          <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage(page - 1)}>
+          <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => { setIsLoading(true); setPage(page - 1) }}>
             <ChevronLeft className="h-4 w-4" />
           </Button>
           <span className="text-sm text-muted-foreground">{page} / {totalPages}</span>
-          <Button variant="outline" size="sm" disabled={page >= totalPages} onClick={() => setPage(page + 1)}>
+          <Button variant="outline" size="sm" disabled={page >= totalPages} onClick={() => { setIsLoading(true); setPage(page + 1) }}>
             <ChevronRight className="h-4 w-4" />
           </Button>
         </div>
