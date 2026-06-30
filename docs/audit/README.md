@@ -54,3 +54,14 @@
 | [2026-06-29-frontend-backend-contract-review.md](2026-06-29-frontend-backend-contract-review.md) | 完整审查报告（方法 / 基础设施对照 / 各模块对照 / 汇总表） |
 | [2026-06-29-issues-backend.md](2026-06-29-issues-backend.md) | 后端 Issue：CORS、OrderVO/FlightVO 字段补齐 |
 | [2026-06-29-issues-frontend.md](2026-06-29-issues-frontend.md) | 前端 Issue：AI 历史、改签 404、类型契约、.env |
+
+---
+
+## 前端 `.env.local` 修复后功能验证（2026-06-30）
+
+前端 `.env.local` 指向后端后，对用户反馈的 4 个问题做端到端验证：P1（AI 助手）/ P3（注册）**实测正常**（此前"不可用"是 `.env.local` 缺失致请求打回前端的误报）；P2（多舱位）/ P4（AI 后台配置）是**真实功能缺失**。
+
+| 文件 | 内容 |
+|---|---|
+| [2026-06-30-issues-backend.md](2026-06-30-issues-backend.md) | 后端 Issue：多舱位支持缺失（B-CABIN-1）+ P1 闭环 |
+| [2026-06-30-issues-frontend.md](2026-06-30-issues-frontend.md) | 前端 Issue：管理后台 AI 配置页缺失（F-AICONFIG-1）+ P3 闭环 |
