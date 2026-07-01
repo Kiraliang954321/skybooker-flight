@@ -13,7 +13,7 @@ public enum ErrorCode {
     // Auth
     UNAUTHORIZED(10001, "用户未登录"),
     FORBIDDEN(10002, "用户无权限"),
-    INVALID_CREDENTIALS(10007, "邮箱或密码错误"),
+    INVALID_CREDENTIALS(10007, "账号或密码错误"),
     ACCOUNT_DISABLED(10008, "账号已被禁用"),
     ACCOUNT_TYPE_MISMATCH(10012, "账号类型不允许登录当前入口"),
     TOKEN_INVALID(10018, "Token 无效"),
@@ -49,7 +49,7 @@ public enum ErrorCode {
     VERIFICATION_EMAIL_SEND_FAILED(10016, "验证码邮件发送失败，请稍后重试"),
     LOGIN_RATE_LIMITED(10017, "登录失败次数过多，请稍后再试"),
     AI_RATE_LIMITED(10020, "请求过于频繁，请稍后再试"),
-    FLIGHT_HAS_INVENTORY(40008, "航班已有座位或订单，不允许修改"),
+    FLIGHT_HAS_INVENTORY(40008, "航班已有座位、订单或舱位配置，不允许修改"),
     ADMIN_ACCOUNT_PROTECTED(40009, "不允许操作管理员账号"),
     REFUND_WINDOW_CLOSED(50001, "退款窗口已关闭，距起飞不足2小时"),
     WAITLIST_NOT_FOUND(50002, "候补订单不存在"),

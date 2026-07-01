@@ -21,7 +21,7 @@ public class FlightRecommendationService {
     private final FlightMapper flightMapper;
 
     public List<Map<String, Object>> recommend(ParsedCondition condition, Long resolvedAirlineId) {
-        String orderBy = resolveOrderBy(condition.getSort());
+        String orderBy = resolveOrderBy(condition.getSort(), condition.getCabinClass());
 
         List<FlightVO> flights = flightMapper.searchRecommendationFlights(
                 condition.getDepartureCity(),
@@ -95,17 +95,11 @@ public class FlightRecommendationService {
         return card;
     }
 
-    private String resolveOrderBy(String sort) {
+    private String resolveOrderBy(String sort, String cabinClass) {
         FlightSort flightSort = FlightSort.fromParam(sort);
         if (flightSort == null) flightSort = FlightSort.DEFAULT;
-        return switch (flightSort) {
-            case PRICE_ASC -> "f.base_price ASC, f.departure_time ASC";
-            case DURATION_ASC -> "f.duration_minutes ASC, f.departure_time ASC";
-            case TIME_ASC -> "f.departure_time ASC";
-            case SEATS_DESC -> "f.remaining_seats DESC, f.departure_time ASC";
-            case PUNCTUAL_DESC -> "f.punctuality_rate DESC, f.departure_time ASC";
-            default -> "f.departure_time ASC";
-        };
+        // 排序 SQL 由 FlightSort.orderBy 统一生成(cabinClass 拼入前经 isValidCabin 校验)
+        return flightSort.orderBy(cabinClass);
     }
 
 }

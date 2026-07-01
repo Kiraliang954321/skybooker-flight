@@ -6,11 +6,14 @@
     <resultMap id="flightVOResult" type="com.skybooker.flight.vo.FlightVO" autoMapping="false">
         <id property="id" column="id"/>
         <result property="flightNo" column="flight_no"/>
+        <result property="airlineId" column="airline_id"/>
         <result property="airlineCode" column="airline_code"/>
         <result property="airlineName" column="airline_name"/>
+        <result property="departureAirportId" column="departure_airport_id"/>
         <result property="departureAirportCode" column="departure_airport_code"/>
         <result property="departureAirportName" column="departure_airport_name"/>
         <result property="departureCity" column="departure_city"/>
+        <result property="arrivalAirportId" column="arrival_airport_id"/>
         <result property="arrivalAirportCode" column="arrival_airport_code"/>
         <result property="arrivalAirportName" column="arrival_airport_name"/>
         <result property="arrivalCity" column="arrival_city"/>
@@ -25,10 +28,15 @@
         <result property="directFlag" column="direct_flag"/>
         <result property="baggageAllowance" column="baggage_allowance"/>
         <result property="punctualityRate" column="punctuality_rate"/>
+        <collection property="cabins"
+                    column="{flightId=id}"
+                    select="com.skybooker.flight.mapper.FlightCabinMapper.findByFlightId"
+                    ofType="com.skybooker.flight.vo.FlightCabinVO"/>
     </resultMap>
 
     <sql id="flightSelect">
-        SELECT f.id, f.flight_no, f.departure_time, f.arrival_time, f.duration_minutes,
+        SELECT f.id, f.flight_no, f.airline_id, f.departure_airport_id, f.arrival_airport_id,
+               f.departure_time, f.arrival_time, f.duration_minutes,
                f.base_price, f.remaining_seats, f.total_seats, f.status, f.publish_status,
                f.direct_flag, f.baggage_allowance, f.punctuality_rate,
                al.code AS airline_code, al.name AS airline_name,
@@ -62,10 +70,28 @@
             AND f.airline_id = #{airlineId}
         </if>
         <if test="minPrice != null">
-            AND f.base_price >= #{minPrice}
+            <choose>
+                <when test="cabinClass != null and cabinClass != ''">
+                    AND EXISTS (SELECT 1 FROM flight_cabin fc
+                                WHERE fc.flight_id = f.id AND fc.cabin_class = #{cabinClass}
+                                AND fc.price &gt;= #{minPrice})
+                </when>
+                <otherwise>
+                    AND f.base_price &gt;= #{minPrice}
+                </otherwise>
+            </choose>
         </if>
         <if test="maxPrice != null">
-            AND f.base_price &lt;= #{maxPrice}
+            <choose>
+                <when test="cabinClass != null and cabinClass != ''">
+                    AND EXISTS (SELECT 1 FROM flight_cabin fc
+                                WHERE fc.flight_id = f.id AND fc.cabin_class = #{cabinClass}
+                                AND fc.price &lt;= #{maxPrice})
+                </when>
+                <otherwise>
+                    AND f.base_price &lt;= #{maxPrice}
+                </otherwise>
+            </choose>
         </if>
         <if test="departureTimeStart != null">
             AND TIME(f.departure_time) >= #{departureTimeStart}
@@ -159,10 +185,28 @@
             AND f.airline_id = #{airlineId}
         </if>
         <if test="minPrice != null">
-            AND f.base_price >= #{minPrice}
+            <choose>
+                <when test="cabinClass != null and cabinClass != ''">
+                    AND EXISTS (SELECT 1 FROM flight_cabin fc
+                                WHERE fc.flight_id = f.id AND fc.cabin_class = #{cabinClass}
+                                AND fc.price &gt;= #{minPrice})
+                </when>
+                <otherwise>
+                    AND f.base_price &gt;= #{minPrice}
+                </otherwise>
+            </choose>
         </if>
         <if test="maxPrice != null">
-            AND f.base_price &lt;= #{maxPrice}
+            <choose>
+                <when test="cabinClass != null and cabinClass != ''">
+                    AND EXISTS (SELECT 1 FROM flight_cabin fc
+                                WHERE fc.flight_id = f.id AND fc.cabin_class = #{cabinClass}
+                                AND fc.price &lt;= #{maxPrice})
+                </when>
+                <otherwise>
+                    AND f.base_price &lt;= #{maxPrice}
+                </otherwise>
+            </choose>
         </if>
         <if test="departureTimeStart != null">
             AND TIME(f.departure_time) >= #{departureTimeStart}

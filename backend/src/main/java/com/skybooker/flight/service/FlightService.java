@@ -17,14 +17,17 @@ import java.util.List;
 @RequiredArgsConstructor
 public class FlightService {
 
-    private static final String DEFAULT_ORDER = "f.departure_time";
-
     private final FlightMapper flightMapper;
 
     public PageResponse<FlightVO> searchFlights(FlightSearchDTO dto) {
         int page = dto.getPage() != null && dto.getPage() > 0 ? dto.getPage() : 1;
         int size = dto.getSize() != null && dto.getSize() > 0 ? dto.getSize() : 10;
         int offset = (page - 1) * size;
+
+        // cabinClass 白名单:排序时会拼入 ORDER BY(${}),必须校验防 SQL 注入
+        if (dto.getCabinClass() != null && !FlightSort.isValidCabin(dto.getCabinClass())) {
+            throw new BusinessException(ErrorCode.VALIDATION_ERROR);
+        }
 
         boolean hasAdvanced = dto.getAirlineId() != null
                 || dto.getMinPrice() != null || dto.getMaxPrice() != null
@@ -38,7 +41,8 @@ public class FlightService {
 
         if (hasAdvanced) {
             FlightSort sort = FlightSort.fromParam(dto.getSort());
-            String orderBy = (sort != null) ? sortToOrderBy(sort) : DEFAULT_ORDER;
+            if (sort == null) sort = FlightSort.DEFAULT;
+            String orderBy = sort.orderBy(dto.getCabinClass());
 
             List<FlightVO> records = flightMapper.searchFlightsAdvanced(
                     dto.getFlightNo(), dto.getDepartureCity(), dto.getArrivalCity(),
@@ -79,16 +83,5 @@ public class FlightService {
             throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND);
         }
         return flightMapper.findSeatsByFlightId(flightId);
-    }
-
-    private String sortToOrderBy(FlightSort sort) {
-        return switch (sort) {
-            case PRICE_ASC -> "f.base_price ASC, f.departure_time ASC";
-            case DURATION_ASC -> "f.duration_minutes ASC, f.departure_time ASC";
-            case TIME_ASC -> "f.departure_time ASC";
-            case SEATS_DESC -> "f.remaining_seats DESC, f.departure_time ASC";
-            case PUNCTUAL_DESC -> "f.punctuality_rate DESC, f.departure_time ASC";
-            default -> DEFAULT_ORDER;
-        };
     }
 }
