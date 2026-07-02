@@ -15,7 +15,7 @@ import type {
   LlmConfigVO,
   LlmConfigDTO,
 } from "@/types/admin"
-import type { FlightVO } from "@/types/flight"
+import type { FlightCabinVO, FlightVO } from "@/types/flight"
 import type { OrderVO } from "@/types/order"
 import type { PageData } from "@/types/api"
 
@@ -74,7 +74,7 @@ export function generateSeats(id: number) {
 }
 
 export function updateFlightCabins(id: number, data: UpdateFlightCabinsDTO) {
-  return put<FlightVO>(`/admin/flights/${id}/cabins`, data, { auth: "admin" })
+  return put<FlightCabinVO[]>(`/admin/flights/${id}/cabins`, data, { auth: "admin" })
 }
 
 // ---- Orders ----

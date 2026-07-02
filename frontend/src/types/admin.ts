@@ -131,9 +131,7 @@ export interface FlightCabinSettingDTO {
 }
 
 /** 批量更新舱位库存请求 */
-export interface UpdateFlightCabinsDTO {
-  cabins: FlightCabinSettingDTO[]
-}
+export type UpdateFlightCabinsDTO = FlightCabinSettingDTO[]
 
 /** 候补表现 */
 export interface WaitlistPerformanceVO {

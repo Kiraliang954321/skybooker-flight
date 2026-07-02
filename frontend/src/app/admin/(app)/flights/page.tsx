@@ -226,12 +226,22 @@ export default function AdminFlightsPage() {
       return
     }
 
+    const configuredCabins = cabinForm
+      .filter((item) => item.totalSeats > 0)
+      .map(({ remainingSeats: _remainingSeats, ...item }) => item)
+
+    const totalConfiguredSeats = configuredCabins.reduce((sum, item) => sum + item.totalSeats, 0)
+    if (totalConfiguredSeats !== cabinFlight.totalSeats) {
+      setCabinErr(
+        `舱位总座位数必须等于航班总座位数（当前航班 ${cabinFlight.totalSeats}，当前配置 ${totalConfiguredSeats}）`
+      )
+      return
+    }
+
     setIsSavingCabins(true)
     setCabinErr(null)
     try {
-      await adminApi.updateFlightCabins(cabinFlight.id, {
-        cabins: cabinForm.map(({ remainingSeats: _remainingSeats, ...item }) => item),
-      })
+      await adminApi.updateFlightCabins(cabinFlight.id, configuredCabins)
       setCabinDialogOpen(false)
       fetchFlights()
     } catch (err) {
